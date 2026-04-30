@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>廣告數據儀表板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f8f7f4;--card:#fff;--border:#e5e3dc;--text:#1a1a18;--muted:#6b6966;--blue:#185FA5;--blue-l:#E6F1FB;--blue-m:#378ADD;--green:#3B6D11;--green-l:#EAF3DE;--amber:#854F0B;--amber-l:#FAEEDA;--amber-m:#EF9F27;--red:#A32D2D;--red-l:#FCEBEB;--r:10px;--rs:6px}
+[data-theme=dark]{--bg:#1a1a18;--card:#242422;--border:#3a3a38;--text:#e8e6df;--muted:#888780;--blue-l:#0c2a40;--blue-m:#4a9de8;--green-l:#0f2a0a;--amber-l:#2a1f08;--amber-m:#d4920a;--red-l:#2a1010}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+#lockScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.lock-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:40px 36px;width:320px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+.lock-icon{width:52px;height:52px;margin:0 auto 18px;background:var(--blue-l);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.lock-icon svg{width:24px;height:24px;stroke:var(--blue-m);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lock-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.lock-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+.lock-input{width:100%;border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;font-size:15px;text-align:center;letter-spacing:3px;background:var(--card);color:var(--text);margin-bottom:12px;transition:border .15s}
+.lock-input:focus{outline:none;border-color:var(--blue-m)}
+.lock-btn{width:100%;padding:10px;border-radius:var(--rs);font-size:13px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-weight:600;transition:opacity .15s}
+.lock-btn:hover{opacity:.88}
+.lock-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px}
+#app{display:none}
+.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;overflow-x:auto;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:700;padding:12px 14px 12px 0;border-right:1px solid var(--border);margin-right:4px;white-space:nowrap}
+.nav-tab{padding:12px 10px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color .15s}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--blue-m);border-bottom-color:var(--blue-m);font-weight:500}
+.nav-tab.dm-tab{color:var(--amber)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:6px;padding-left:8px}
+.theme-btn,.nav-logout{padding:5px 9px;font-size:11px;color:var(--muted);cursor:pointer;border:1px solid var(--border);border-radius:var(--rs);background:var(--card);white-space:nowrap;transition:background .15s}
+.theme-btn:hover,.nav-logout:hover{background:var(--bg)}
+.toolbar{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar label{font-size:12px;color:var(--muted)}
+.toolbar input[type=month]{border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;background:var(--card);color:var(--text)}
+.btn{padding:5px 11px;border-radius:var(--rs);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{opacity:.88}
+.btn-green{background:#1D9E75;color:#fff;border-color:#1D9E75}
+.btn-green:hover{opacity:.88}
+.btn-purple{background:#534AB7;color:#fff;border-color:#534AB7}
+.btn-purple:hover{opacity:.88}
+.btn-red{background:var(--red-l);color:var(--red);border-color:#f09595}
+.btn-red:hover{background:#f7c1c1}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.section-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pbadge{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.google-b{background:#E8F0FE;color:#1a56c4}.meta-b{background:#E7F3FF;color:#0765C5}.criteo-b{background:#FFF3E0;color:#E65100}.shopee-b{background:#FFF0F0;color:#D23E14}.momo-b{background:#F3E5F5;color:#7B1FA2}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.ftitle{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:500}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:9px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:11px;color:var(--muted)}
+.fg input,.fg textarea,.fg select{border:1px solid var(--border);border-radius:var(--rs);padding:6px 8px;font-size:12px;background:var(--card);color:var(--text);width:100%;transition:border .15s}
+.fg input:focus,.fg textarea:focus{outline:none;border-color:var(--blue-m)}
+.fg textarea{resize:vertical;min-height:70px;font-family:inherit}
+.hfg .fg label{color:var(--amber-m);font-weight:500}
+.hfg .fg input{border-color:var(--amber-m);background:var(--amber-l)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.ctitle{font-size:11px;font-weight:500;margin-bottom:8px;color:var(--muted)}
+.cwrap{position:relative;height:155px}
+.cwrap-tall{position:relative;height:200px}
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg);padding:7px 10px;text-align:left;font-weight:500;color:var(--muted);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.tag{padding:1px 7px;border-radius:20px;font-size:10px;font-weight:500}
+.ov5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:border-color .15s}
+.pcard:hover{border-color:var(--blue-m)}
+.pcard .pname{margin-bottom:6px}
+.pcard .pspend{font-size:17px;font-weight:700}
+.pcard .proas{font-size:11px;color:var(--muted);margin-top:3px}
+.good{color:#1D9E75;font-weight:500}.bad{color:var(--red);font-weight:500}
+.divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.empty{text-align:center;padding:28px;color:var(--muted)}
+.mom-badge{font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;font-weight:500}
+.mom-up{background:var(--green-l);color:var(--green)}.mom-down{background:var(--red-l);color:var(--red)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.kpi-label{font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.kpi-val{font-size:20px;font-weight:700}
+.kpi-mom{font-size:11px;margin-top:3px}
+.notes-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.notes-title{font-size:12px;font-weight:600;margin-bottom:10px}
+.issue-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.issue-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg)}
+.issue-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dot-red{background:#ef4444}.dot-amber{background:#f59e0b}.dot-green{background:#10b981}
+.issue-text{font-size:12px;flex:1}
+.add-issue-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.add-issue-row select{border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;background:var(--card);color:var(--text)}
+.add-issue-row input{flex:1;min-width:120px;border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;background:var(--card);color:var(--text)}
+.momo-items-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.momo-items-table th{background:var(--bg);padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+.momo-items-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+.momo-items-table tr:last-child td{border-bottom:none}
+.roas-bar{height:8px;border-radius:4px;display:inline-block;min-width:4px}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.import-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.itab{padding:6px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--muted);transition:all .15s}
+.itab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.drop-zone{border:2px dashed var(--border);border-radius:var(--r);padding:22px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:10px}
+.drop-zone:hover,.drop-zone.over{border-color:var(--blue-m)}
+.drop-zone p{font-size:12px;color:var(--muted);margin-top:6px}
+.drop-zone svg{width:26px;height:26px;stroke:var(--muted);fill:none;stroke-width:1.5;margin:0 auto;display:block}
+.api-row{display:flex;gap:6px;margin-bottom:10px}
+.api-row input{flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:7px 10px;font-size:12px;background:var(--card);color:var(--text)}
+.preview-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--muted);min-height:60px;max-height:150px;overflow-y:auto;margin-bottom:10px;white-space:pre-wrap;font-family:monospace;line-height:1.6}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.modal-close{padding:7px 14px;border-radius:var(--rs);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text)}
+.platform-select{width:100%;border:1px solid var(--border);border-radius:var(--rs);padding:7px 8px;font-size:12px;background:var(--card);color:var(--text);margin-bottom:10px}
+.status-msg{font-size:12px;padding:7px 10px;border-radius:var(--rs);margin-bottom:8px}
+.status-ok{background:var(--green-l);color:var(--green)}
+.status-err{background:var(--red-l);color:var(--red)}
+.status-loading{background:var(--blue-l);color:var(--blue-m)}
+.hint-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.8}
+.hint-box strong{color:var(--text)}
+.date-confirm{background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px;display:none}
+.date-confirm.show{display:block}
+.date-confirm-title{font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px}
+.date-confirm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.date-confirm-row span{font-size:12px;color:var(--text)}
+.date-confirm-row input[type=month]{border:1px solid var(--amber-m);border-radius:var(--rs);padding:4px 8px;font-size:12px;background:var(--card);color:var(--text)}
+.date-source{font-size:10px;color:var(--muted);margin-top:4px}
+/* 資料管理 */
+.dm-month-block{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.dm-month-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.dm-month-label{font-size:14px;font-weight:600;flex:1}
+.dm-month-total{font-size:12px;color:var(--muted)}
+.dm-platform-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.dm-platform-row:last-child{border-bottom:none}
+.dm-platform-row:hover{background:var(--bg)}
+.dm-pname{width:90px;flex-shrink:0}
+.dm-metrics{flex:1;font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.dm-metric{white-space:nowrap}
+.dm-metric strong{color:var(--text)}
+.dm-actions{display:flex;gap:6px;flex-shrink:0}
+.dm-btn{padding:4px 10px;border-radius:var(--rs);font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);white-space:nowrap;transition:all .15s}
+.dm-btn-move{border-color:var(--blue-m);color:var(--blue-m)}
+.dm-btn-move:hover{background:var(--blue-l)}
+.dm-btn-del{border-color:#f09595;color:var(--red)}
+.dm-btn-del:hover{background:var(--red-l)}
+.dm-empty{text-align:center;padding:48px;color:var(--muted);font-size:13px}
+/* 移動 modal */
+.move-modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;width:380px;max-width:96vw}
+.move-modal h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.move-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.move-row label{font-size:12px;color:var(--muted);width:50px;flex-shrink:0}
+.move-row input[type=month]{flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:7px 10px;font-size:13px;background:var(--card);color:var(--text)}
+.move-arrow{font-size:20px;color:var(--muted);text-align:center;margin-bottom:10px}
+.move-warning{font-size:11px;color:var(--amber);background:var(--amber-l);border:1px solid var(--amber-m);border-radius:var(--rs);padding:8px 10px;margin-bottom:12px;display:none}
+.move-warning.show{display:block}
+@media(max-width:640px){.ov5{grid-template-columns:repeat(2,1fr)}.cgrid{grid-template-columns:1fr}.nav{overflow-x:auto}}
+</style>
+</head>
+<body>
+
+<!-- 鎖定畫面 -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <div class="lock-title">廣告數據儀表板</div>
+    <div class="lock-sub">請輸入密碼以繼續</div>
+    <input type="password" class="lock-input" id="pwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')unlock()">
+    <button class="lock-btn" onclick="unlock()">進入</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<!-- 導覽列 -->
+<nav class="nav">
+  <div class="nav-brand">📊 廣告數據</div>
+  <div class="nav-tab active" onclick="showPage('overview')">總表</div>
+  <div class="nav-tab" onclick="showPage('google')">Google</div>
+  <div class="nav-tab" onclick="showPage('meta')">Meta</div>
+  <div class="nav-tab" onclick="showPage('criteo')">Criteo</div>
+  <div class="nav-tab" onclick="showPage('shopee')">Shopee</div>
+  <div class="nav-tab" onclick="showPage('momo')">Momo RMN</div>
+  <div class="nav-tab dm-tab" onclick="showPage('datamanager')">🗂 資料管理</div>
+  <div class="nav-right">
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 深色</button>
+    <button class="nav-logout" onclick="logout()">登出</button>
+  </div>
+</nav>
+
+<!-- 工具列 -->
+<div class="toolbar">
+  <label>月份</label>
+  <input type="month" id="selMonth" onchange="onMC()">
+  <button class="btn btn-primary" onclick="saveAll()">💾 儲存</button>
+  <button class="btn btn-green" onclick="openImport()">⬆ 匯入資料</button>
+  <button class="btn" onclick="exportD()">⬇ 匯出 JSON</button>
+</div>
+
+<!-- 匯入 Modal -->
+<div class="modal-bg" id="importModal">
+  <div class="modal">
+    <div class="modal-title">匯入廣告數據</div>
+    <div class="modal-sub">上傳後自動辨識平台與時間，確認後套用</div>
+    <div class="import-tabs">
+      <div class="itab active" onclick="switchImportTab('auto')">🔍 自動辨識（推薦）</div>
+      <div class="itab" onclick="switchImportTab('json')">📄 JSON 備份</div>
+      <div class="itab" onclick="switchImportTab('screenshot')">🖼 截圖 AI</div>
+    </div>
+    <div id="itab-auto">
+      <div class="hint-box"><strong>支援格式：</strong>Criteo CSV、蝦皮 CSV、Momo Excel (.xlsx)<br>上傳後自動辨識平台類型＋資料月份，讓你確認後再套用</div>
+      <div class="drop-zone" onclick="document.getElementById('autoFile').click()" ondragover="dz(event)" ondrop="dropFile(event,'auto')">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>點擊或拖曳任何廣告報表</p>
+        <p style="font-size:10px;margin-top:4px;color:var(--muted)">Criteo .csv ｜ 蝦皮 .csv ｜ Momo .xlsx</p>
+      </div>
+      <input type="file" id="autoFile" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="handleAutoFile(event)">
+      <div class="date-confirm" id="dateConfirm">
+        <div class="date-confirm-title">📅 偵測到資料月份，請確認</div>
+        <div class="date-confirm-row">
+          <span>偵測：</span><strong id="detectedDateLabel" style="color:var(--blue-m)"></strong>
+          <span style="color:var(--muted)">→ 套用到：</span>
+          <input type="month" id="detectedMonthInput">
+        </div>
+        <div class="date-source" id="dateSource"></div>
+      </div>
+      <div class="preview-box" id="autoPreview">上傳後顯示辨識結果...</div>
+    </div>
+    <div id="itab-json" style="display:none">
+      <div class="drop-zone" onclick="document.getElementById('jsonFile').click()" ondragover="dz(event)" ondrop="dropFile(event,'json')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>點擊或拖曳 JSON 備份</p>
+      </div>
+      <input type="file" id="jsonFile" accept=".json" style="display:none" onchange="handleJson(event)">
+    </div>
+    <div id="itab-screenshot" style="display:none">
+      <div class="hint-box"><strong>需要 Claude API Key</strong>，上傳截圖後 AI 自動讀取所有廣告指標</div>
+      <div class="api-row">
+        <input type="password" id="apiKeyInput" placeholder="Claude API Key (sk-ant-...)">
+        <button class="btn btn-purple" onclick="saveApiKey()">儲存</button>
+      </div>
+      <select class="platform-select" id="ssPlatform">
+        <option value="google">Google Ads</option><option value="meta">Meta</option>
+        <option value="criteo">Criteo</option><option value="shopee">Shopee</option><option value="momo">Momo RMN</option>
+      </select>
+      <div class="drop-zone" onclick="document.getElementById('ssFile').click()" ondragover="dz(event)" ondrop="dropFile(event,'ss')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p>點擊或拖曳截圖 (PNG/JPG)</p>
+      </div>
+      <input type="file" id="ssFile" accept="image/*" style="display:none" onchange="handleScreenshot(event)">
+      <div id="ssStatus"></div>
+      <div class="preview-box" id="ssPreview">AI 讀取結果...</div>
+    </div>
+    <div id="importStatus"></div>
+    <div class="modal-footer">
+      <button class="modal-close" onclick="closeImport()">關閉</button>
+      <button class="btn btn-primary" id="importConfirmBtn" onclick="confirmImport()" style="display:none">✓ 套用數據</button>
+    </div>
+  </div>
+</div>
+
+<!-- 移動資料 Modal -->
+<div class="modal-bg" id="moveModal">
+  <div class="move-modal">
+    <h3>📦 移動資料</h3>
+    <div id="moveDesc" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+    <div class="move-row"><label>從</label><input type="month" id="moveFrom" readonly style="background:var(--bg);color:var(--muted)"></div>
+    <div class="move-arrow">↓</div>
+    <div class="move-row"><label>移到</label><input type="month" id="moveTo" oninput="checkMoveConflict()"></div>
+    <div class="move-warning" id="moveWarning">⚠️ 目標月份已有此平台的資料，移動後將覆蓋！</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <input type="checkbox" id="moveDeleteSrc" checked>
+      <label for="moveDeleteSrc" style="font-size:12px;cursor:pointer">移動後刪除原月份此平台資料</label>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-close" onclick="closeMoveModal()">取消</button>
+      <button class="btn btn-primary" onclick="executeMove()">✓ 確認移動</button>
+    </div>
+  </div>
+</div>
+
+<!-- 刪除確認 Modal -->
+<div class="modal-bg" id="deleteModal">
+  <div class="move-modal">
+    <h3>🗑 確認刪除</h3>
+    <div id="deleteDesc" style="font-size:13px;margin-bottom:16px;line-height:1.7"></div>
+    <div class="modal-footer">
+      <button class="modal-close" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-red" onclick="executeDelete()">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 總表 -->
+<div id="page-overview" class="page active">
+  <div class="ov5" id="pSummary"></div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">各平台廣告支出（當月）</div><div class="cwrap"><canvas id="pieC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">各平台 ROAS 比較</div><div class="cwrap"><canvas id="roasBarC"></canvas></div></div>
+  </div>
+  <div class="ccard" style="margin-bottom:12px"><div class="ctitle">全平台月度廣告支出趨勢</div><div class="cwrap-tall"><canvas id="trendC"></canvas></div></div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>平台</th><th>廣告支出</th><th>MoM</th><th>YoY</th><th>ROAS</th><th>轉換數</th><th>CPC</th><th>CPA</th></tr></thead>
+    <tbody id="ovBody"></tbody>
+  </table></div></div>
+</div>
+
+<!-- Google -->
+<div id="page-google" class="page">
+  <div class="section-title"><span class="pbadge google-b">Google Ads</span><span id="gLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="kpi-row" id="g_kpi"></div>
+  <div class="fcard"><div class="ftitle">輸入本月數據</div><div class="fgrid">
+    <div class="fg"><label>曝光 Impressions</label><input type="number" id="g_impressions" oninput="autoKPI('google')"></div>
+    <div class="fg"><label>點擊 Clicks</label><input type="number" id="g_clicks" oninput="autoKPI('google')"></div>
+    <div class="fg"><label>CTR (%)</label><input type="number" id="g_ctr" step="0.01"></div>
+    <div class="fg"><label>CPC</label><input type="number" id="g_cpc" step="0.01"></div>
+    <div class="fg"><label>加入購物車 ATC</label><input type="number" id="g_atc"></div>
+    <div class="fg"><label>歸因購買數 Conversion</label><input type="number" id="g_conv" oninput="autoKPI('google')"></div>
+    <div class="fg"><label>歸因購買價值 C.Value</label><input type="number" id="g_cvalue" step="0.01"></div>
+    <div class="fg"><label>轉換率 CVR (%)</label><input type="number" id="g_cvr" step="0.01"></div>
+    <div class="fg"><label>廣告支出 Spend</label><input type="number" id="g_spend" step="0.01" oninput="autoKPI('google')"></div>
+    <div class="fg"><label>MoM 支出% (自動)</label><input type="number" id="g_spend_mom" step="0.01" readonly style="background:var(--bg);color:var(--muted)"></div>
+    <div class="fg hfg"><label>★ 每次購物車成本 CPA</label><input type="number" id="g_cpa" step="0.01"></div>
+    <div class="fg"><label>MoM CPA%</label><input type="number" id="g_cpa_mom" step="0.01"></div>
+    <div class="fg"><label>每次轉換成本</label><input type="number" id="g_conv_cpa" step="0.01"></div>
+    <div class="fg"><label>MoM 轉換成本%</label><input type="number" id="g_conv_cpa_mom" step="0.01"></div>
+    <div class="fg hfg"><label>★ ROAS</label><input type="number" id="g_roas" step="0.01" oninput="autoKPI('google')"></div>
+    <div class="fg"><label>MoM ROAS% (自動)</label><input type="number" id="g_roas_mom" step="0.01" readonly style="background:var(--bg);color:var(--muted)"></div>
+    <div class="fg"><label>廣告帶來客單價</label><input type="number" id="g_aov" step="0.01"></div>
+    <div class="fg"><label>廣告客單 MoM%</label><input type="number" id="g_aov_mom" step="0.01"></div>
+  </div></div>
+  <div class="notes-card"><div class="notes-title">📝 備註 & 問題診斷</div>
+    <div class="fg"><label>本月備註</label><textarea id="g_note" placeholder="策略調整、特殊事件..."></textarea></div>
+    <div class="issue-list" id="g_issues"></div>
+    <div class="add-issue-row">
+      <select id="g_iss_pri"><option value="red">🔴 立即</option><option value="amber">🟡 本週</option><option value="green">🟢 本月</option></select>
+      <input type="text" id="g_iss_txt" placeholder="問題描述" onkeydown="if(event.key==='Enter')addIssue('google')">
+      <button class="btn btn-primary" onclick="addIssue('google')">+ 新增</button>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="g_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="g_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CPA 月趨勢</div><div class="cwrap"><canvas id="g_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CTR & CVR (%)</div><div class="cwrap"><canvas id="g_trC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table><thead><tr><th>月份</th><th>支出</th><th>MoM</th><th>YoY</th><th>曝光</th><th>點擊</th><th>CTR%</th><th>CPC</th><th>轉換</th><th>ROAS</th><th>CPA</th></tr></thead><tbody id="gHist"></tbody></table></div></div>
+</div>
+
+<!-- Meta -->
+<div id="page-meta" class="page">
+  <div class="section-title"><span class="pbadge meta-b">Meta</span><span id="mLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="kpi-row" id="m_kpi"></div>
+  <div class="fcard"><div class="ftitle">輸入本月數據</div><div class="fgrid">
+    <div class="fg"><label>廣告支出 Spend</label><input type="number" id="m_spend" step="0.01" oninput="autoKPI('meta')"></div>
+    <div class="fg"><label>轉換次數 網站購買</label><input type="number" id="m_conv" oninput="autoKPI('meta')"></div>
+    <div class="fg"><label>每次轉換成本</label><input type="number" id="m_conv_cost" step="0.01"></div>
+    <div class="fg hfg"><label>★ ROAS</label><input type="number" id="m_roas" step="0.01" oninput="autoKPI('meta')"></div>
+    <div class="fg"><label>歸因購物車 ATC</label><input type="number" id="m_atc"></div>
+    <div class="fg"><label>歸因購買價值 C.Value</label><input type="number" id="m_cvalue" step="0.01"></div>
+    <div class="fg hfg"><label>★ 每次購物車成本 CPA</label><input type="number" id="m_cpa" step="0.01"></div>
+  </div>
+  <hr class="divider"><div class="ftitle">排除掉流量廣告後</div><div class="fgrid">
+    <div class="fg"><label>轉換廣告支出</label><input type="number" id="m_conv_spend" step="0.01"></div>
+    <div class="fg"><label>其他廣告支出</label><input type="number" id="m_other_spend" step="0.01"></div>
+    <div class="fg"><label>歸因購買價值（全）</label><input type="number" id="m_cvalue_all" step="0.01"></div>
+    <div class="fg hfg"><label>★ 轉換廣告 ROAS</label><input type="number" id="m_conv_roas" step="0.01"></div>
+  </div></div>
+  <div class="notes-card"><div class="notes-title">📝 備註 & 問題診斷</div>
+    <div class="fg"><label>本月備註</label><textarea id="m_note" placeholder="策略調整、特殊事件..."></textarea></div>
+    <div class="issue-list" id="m_issues"></div>
+    <div class="add-issue-row">
+      <select id="m_iss_pri"><option value="red">🔴 立即</option><option value="amber">🟡 本週</option><option value="green">🟢 本月</option></select>
+      <input type="text" id="m_iss_txt" placeholder="問題描述" onkeydown="if(event.key==='Enter')addIssue('meta')">
+      <button class="btn btn-primary" onclick="addIssue('meta')">+ 新增</button>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="m_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="m_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CPA 月趨勢</div><div class="cwrap"><canvas id="m_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">整體 vs 轉換廣告 ROAS</div><div class="cwrap"><canvas id="m_rrC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table><thead><tr><th>月份</th><th>支出</th><th>MoM</th><th>YoY</th><th>轉換數</th><th>轉換成本</th><th>ROAS</th><th>CPA</th><th>轉換廣告ROAS</th></tr></thead><tbody id="mHist"></tbody></table></div></div>
+</div>
+
+<!-- Criteo -->
+<div id="page-criteo" class="page">
+  <div class="section-title"><span class="pbadge criteo-b">Criteo</span><span id="cLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="kpi-row" id="cr_kpi"></div>
+  <div class="fcard"><div class="ftitle">輸入本月數據</div><div class="fgrid">
+    <div class="fg"><label>曝光數 Displays</label><input type="number" id="cr_displays" oninput="autoKPI('criteo')"></div>
+    <div class="fg"><label>點擊數 Clicks</label><input type="number" id="cr_clicks" oninput="autoKPI('criteo')"></div>
+    <div class="fg"><label>GA4 造訪 Visits</label><input type="number" id="cr_visits"></div>
+    <div class="fg"><label>新使用者人數</label><input type="number" id="cr_new_users"></div>
+    <div class="fg"><label>廣告支出 Cost</label><input type="number" id="cr_spend" step="0.01" oninput="autoKPI('criteo')"></div>
+    <div class="fg"><label>CPC</label><input type="number" id="cr_cpc" step="0.01"></div>
+    <div class="fg"><label>CTR</label><input type="number" id="cr_ctr" step="0.0001"></div>
+    <div class="fg"><label>轉換數 Sales PC30D</label><input type="number" id="cr_conv" oninput="autoKPI('criteo')"></div>
+    <div class="fg"><label>營收 Revenue PC30D</label><input type="number" id="cr_revenue" step="0.01" oninput="autoKPI('criteo')"></div>
+    <div class="fg hfg"><label>★ ROAS（Revenue/Cost）</label><input type="number" id="cr_roas" step="0.01" oninput="autoKPI('criteo')"></div>
+    <div class="fg hfg"><label>★ 每次新客成本</label><input type="number" id="cr_cpa_new" step="0.01"></div>
+    <div class="fg"><label>CVR</label><input type="number" id="cr_cvr" step="0.0001"></div>
+  </div></div>
+  <div class="notes-card"><div class="notes-title">📝 備註 & 問題診斷</div>
+    <div class="fg"><label>本月備註</label><textarea id="cr_note" placeholder="新客導入、受眾調整..."></textarea></div>
+    <div class="issue-list" id="cr_issues"></div>
+    <div class="add-issue-row">
+      <select id="cr_iss_pri"><option value="red">🔴 立即</option><option value="amber">🟡 本週</option><option value="green">🟢 本月</option></select>
+      <input type="text" id="cr_iss_txt" placeholder="問題描述" onkeydown="if(event.key==='Enter')addIssue('criteo')">
+      <button class="btn btn-primary" onclick="addIssue('criteo')">+ 新增</button>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="cr_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="cr_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">每次新客成本</div><div class="cwrap"><canvas id="cr_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Clicks & GA4造訪</div><div class="cwrap"><canvas id="cr_uC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table><thead><tr><th>月份</th><th>支出</th><th>MoM</th><th>YoY</th><th>曝光</th><th>點擊</th><th>GA4造訪</th><th>轉換</th><th>營收</th><th>ROAS</th><th>每次新客成本</th></tr></thead><tbody id="crHist"></tbody></table></div></div>
+</div>
+
+<!-- Shopee -->
+<div id="page-shopee" class="page">
+  <div class="section-title"><span class="pbadge shopee-b">Shopee Ads</span><span id="sLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="kpi-row" id="sh_kpi"></div>
+  <div class="fcard"><div class="ftitle">輸入本月數據</div><div class="fgrid">
+    <div class="fg"><label>點擊數</label><input type="number" id="sh_clicks" oninput="autoKPI('shopee')"></div>
+    <div class="fg"><label>訂單數 (*銷售數不準)</label><input type="number" id="sh_orders"></div>
+    <div class="fg"><label>銷售金額 (K/M→補0)</label><input type="number" id="sh_sales" step="0.01"></div>
+    <div class="fg"><label>廣告支出 (K/M→補0)</label><input type="number" id="sh_spend" step="0.01" oninput="autoKPI('shopee')"></div>
+    <div class="fg hfg"><label>★ ROAS</label><input type="number" id="sh_roas" step="0.01" oninput="autoKPI('shopee')"></div>
+  </div>
+  <hr class="divider"><div class="ftitle">全平台整合（客戶別營業額）</div><div class="fgrid">
+    <div class="fg"><label>全平台營業額</label><input type="number" id="sh_total_rev" step="0.01"></div>
+    <div class="fg hfg"><label>★ 廣告價值對全營業額%</label><input type="number" id="sh_ad_pct" step="0.01"></div>
+    <div class="fg"><label>蝦皮數據中心的營收</label><input type="number" id="sh_dc_rev" step="0.01"></div>
+  </div></div>
+  <div class="notes-card"><div class="notes-title">📝 備註 & 問題診斷</div>
+    <div class="fg"><label>本月備註</label><textarea id="sh_note" placeholder="策略調整、特殊事件..."></textarea></div>
+    <div class="issue-list" id="sh_issues"></div>
+    <div class="add-issue-row">
+      <select id="sh_iss_pri"><option value="red">🔴 立即</option><option value="amber">🟡 本週</option><option value="green">🟢 本月</option></select>
+      <input type="text" id="sh_iss_txt" placeholder="問題描述" onkeydown="if(event.key==='Enter')addIssue('shopee')">
+      <button class="btn btn-primary" onclick="addIssue('shopee')">+ 新增</button>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="sh_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="sh_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告佔全平台營業額 (%)</div><div class="cwrap"><canvas id="sh_pC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">銷售金額 月趨勢</div><div class="cwrap"><canvas id="sh_slC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table><thead><tr><th>月份</th><th>支出</th><th>MoM</th><th>YoY</th><th>點擊</th><th>訂單數</th><th>銷售金額</th><th>ROAS</th><th>廣告佔比%</th></tr></thead><tbody id="shHist"></tbody></table></div></div>
+</div>
+
+<!-- Momo RMN -->
+<div id="page-momo" class="page">
+  <div class="section-title"><span class="pbadge momo-b">Momo RMN</span><span id="moLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="kpi-row" id="mo_kpi"></div>
+  <div class="fcard"><div class="ftitle">輸入本月數據（廣告成效-拉時擋）</div><div class="fgrid">
+    <div class="fg"><label>點擊數</label><input type="number" id="mo_clicks" oninput="autoKPI('momo')"></div>
+    <div class="fg"><label>訂單數</label><input type="number" id="mo_orders" oninput="autoKPI('momo')"></div>
+    <div class="fg"><label>購物車數</label><input type="number" id="mo_cart"></div>
+    <div class="fg"><label>CPC 每次點擊出價</label><input type="number" id="mo_cpc" step="0.01"></div>
+    <div class="fg"><label>商品訂購金額</label><input type="number" id="mo_order_val" step="0.01"></div>
+    <div class="fg hfg"><label>★ 轉換率 CVR (%)</label><input type="number" id="mo_cvr" step="0.01"></div>
+    <div class="fg"><label>廣告支出 Spend</label><input type="number" id="mo_spend" step="0.01" oninput="autoKPI('momo')"></div>
+    <div class="fg hfg"><label>★ ROAS</label><input type="number" id="mo_roas" step="0.01" oninput="autoKPI('momo')"></div>
+    <div class="fg"><label>每次購物車成本</label><input type="number" id="mo_cart_cpa" step="0.01"></div>
+  </div>
+  <hr class="divider"><div class="ftitle">全平台整合（客戶別營業額）</div><div class="fgrid">
+    <div class="fg"><label>全平台營業額</label><input type="number" id="mo_total_rev" step="0.01"></div>
+    <div class="fg hfg"><label>★ 廣告價值對全營業額%</label><input type="number" id="mo_ad_pct" step="0.01"></div>
+  </div></div>
+  <div class="fcard">
+    <div class="ftitle" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🏷 RNM 商品明細（按品項記錄）</span>
+      <button class="btn btn-primary" onclick="addMomoItem()" style="padding:3px 10px;font-size:11px">+ 新增品項</button>
+    </div>
+    <table class="momo-items-table"><thead><tr><th>品項名稱</th><th>投放天數</th><th>花費</th><th>日均花費</th><th>訂單數</th><th>銷售金額</th><th>ROAS</th><th></th></tr></thead><tbody id="momoItemsTbody"></tbody></table>
+    <div id="momoItemsEmpty" style="text-align:center;padding:16px;color:var(--muted);font-size:12px">尚未新增品項，點「+ 新增品項」開始記錄</div>
+  </div>
+  <div class="notes-card"><div class="notes-title">📝 備註 & 問題診斷</div>
+    <div class="fg"><label>本月備註</label><textarea id="mo_note" placeholder="電動床/薄墊/枕頭各品項表現..."></textarea></div>
+    <div class="issue-list" id="mo_issues"></div>
+    <div class="add-issue-row">
+      <select id="mo_iss_pri"><option value="red">🔴 立即</option><option value="amber">🟡 本週</option><option value="green">🟢 本月</option></select>
+      <input type="text" id="mo_iss_txt" placeholder="問題描述" onkeydown="if(event.key==='Enter')addIssue('momo')">
+      <button class="btn btn-primary" onclick="addIssue('momo')">+ 新增</button>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="mo_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="mo_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">轉換率 CVR (%) 月趨勢</div><div class="cwrap"><canvas id="mo_cvC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">每次購物車成本 月趨勢</div><div class="cwrap"><canvas id="mo_cpC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table><thead><tr><th>月份</th><th>支出</th><th>MoM</th><th>YoY</th><th>點擊</th><th>訂單</th><th>CPC</th><th>CVR%</th><th>ROAS</th><th>購物車成本</th></tr></thead><tbody id="moHist"></tbody></table></div></div>
+</div>
+
+<!-- 資料管理 -->
+<div id="page-datamanager" class="page">
+  <div class="section-title">🗂 資料管理中心</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--muted)">快速操作：</span>
+    <button class="btn btn-green" onclick="openImport()">⬆ 匯入新資料</button>
+    <button class="btn" onclick="exportD()">⬇ 匯出所有資料 (JSON)</button>
+    <button class="btn btn-red" onclick="confirmClearAll()" style="margin-left:auto">🗑 清除所有資料</button>
+  </div>
+  <div id="dmContent"></div>
+</div>
+</div><!-- end #app -->
+
+<script>
+// ─── 密碼 & 設定 ────────────────────────────────────────────────────
+const PW='JamesW', SK='ad_v1', TK='ad_theme', AK='ad_apikey';
+let db=JSON.parse(localStorage.getItem(SK)||'{}');
+let pendingImport=null;
+let moveState={month:'',platform:''};
+let deleteState={month:'',platform:'',type:''};
+
+// ─── Theme ───────────────────────────────────────────────────────────
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  const b=document.getElementById('themeBtn');
+  if(b)b.textContent=t==='dark'?'☀️ 淺色':'🌙 深色';
+  localStorage.setItem(TK,t);
+  setTimeout(()=>renderAll(),80);
+}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
+applyTheme(localStorage.getItem(TK)||'light');
+
+// ─── Auth ────────────────────────────────────────────────────────────
+function unlock(){
+  if(document.getElementById('pwInput').value===PW){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    sessionStorage.setItem('ad_auth','1');
+    init();
+  }else{
+    document.getElementById('lockErr').textContent='密碼錯誤，請再試一次';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+  }
+}
+function logout(){
+  sessionStorage.removeItem('ad_auth');
+  document.getElementById('app').style.display='none';
+  document.getElementById('lockScreen').style.display='flex';
+  document.getElementById('pwInput').value='';
+  document.getElementById('lockErr').textContent='';
+}
+if(sessionStorage.getItem('ad_auth')==='1'){
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+// ─── 設定 ────────────────────────────────────────────────────────────
+const COLS={google:'#4285f4',meta:'#0765C5',criteo:'#E65100',shopee:'#D23E14',momo:'#7B1FA2'};
+const PNAMES={google:'Google',meta:'Meta',criteo:'Criteo',shopee:'Shopee',momo:'Momo RMN'};
+const PEMOJI={google:'🔵',meta:'🔷',criteo:'🟠',shopee:'🔴',momo:'🟣'};
+const PF={
+  google:['impressions','clicks','ctr','cpc','atc','conv','cvalue','cvr','spend','spend_mom','cpa','cpa_mom','conv_cpa','conv_cpa_mom','roas','roas_mom','aov','aov_mom'],
+  meta:['spend','conv','conv_cost','roas','atc','cvalue','cpa','conv_spend','other_spend','cvalue_all','conv_roas'],
+  criteo:['displays','clicks','visits','new_users','spend','cpc','ctr','conv','revenue','roas','cpa_new','cvr'],
+  shopee:['clicks','orders','sales','spend','roas','total_rev','ad_pct','dc_rev'],
+  momo:['clicks','orders','cart','cpc','order_val','cvr','spend','roas','cart_cpa','total_rev','ad_pct']
+};
+const PX={google:'g',meta:'m',criteo:'cr',shopee:'sh',momo:'mo'};
+const NOTES={google:'g_note',meta:'m_note',criteo:'cr_note',shopee:'sh_note',momo:'mo_note'};
+
+// ─── Month utils ─────────────────────────────────────────────────────
+function ml(m){if(!m)return'';const[y,mo]=m.split('-');return`${y}年${parseInt(mo)}月`}
+function cm(){return document.getElementById('selMonth').value}
+function prevMonth(m){const d=new Date(m+'-01');d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7)}
+function prevYear(m){const[y,mo]=m.split('-');return`${parseInt(y)-1}-${mo}`}
+function getPD(m,p){return(db[m]&&db[m][p])||{}}
+function onMC(){loadF();renderAll()}
+
+// ─── MoM / YoY ───────────────────────────────────────────────────────
+function pctChange(c,p){if(!p||p===0)return null;return((c-p)/Math.abs(p)*100).toFixed(1)}
+function momBadge(v){if(v===null)return'<span style="color:var(--muted)">—</span>';const n=parseFloat(v);return`<span class="mom-badge ${n>0?'mom-up':'mom-down'}">${n>0?'▲':'▼'}${Math.abs(n)}%</span>`}
+function momCell(c,p,inv=false){const v=pctChange(c,p);if(v===null)return'<td style="color:var(--muted)">—</td>';const n=parseFloat(v);return`<td class="${(inv?n<0:n>0)?'good':'bad'}">${n>0?'▲':'▼'}${Math.abs(n)}%</td>`}
+
+// ─── KPI 自動計算 ────────────────────────────────────────────────────
+function autoKPI(p){
+  const m=cm();const prevD=getPD(prevMonth(m),p);const px=PX[p];
+  const spend=parseFloat(document.getElementById(px+'_spend')?.value)||0;
+  const roas=parseFloat(document.getElementById(px+'_roas')?.value)||0;
+  if(p==='google'){
+    const sm=pctChange(spend,prevD.spend);const rm=pctChange(roas,prevD.roas);
+    const se=document.getElementById('g_spend_mom');const re=document.getElementById('g_roas_mom');
+    if(se&&sm!==null)se.value=sm;if(re&&rm!==null)re.value=rm;
+  }
+  renderKPI(p);
+}
+
+function renderKPI(p){
+  const m=cm();const cur=getPD(m,p);const prevD=getPD(prevMonth(m),p);const yoyD=getPD(prevYear(m),p);
+  const px=PX[p];const el=document.getElementById(px+'_kpi');if(!el)return;
+  const kpis=[
+    {label:'廣告支出',val:cur.spend,prev:prevD.spend,yoy:yoyD.spend,fmt:v=>'$'+Math.round(v).toLocaleString(),inv:true},
+    {label:'ROAS',val:cur.roas,prev:prevD.roas,yoy:yoyD.roas,fmt:v=>v.toFixed(2)+'x'},
+    {label:'支出 MoM',val:pctChange(cur.spend,prevD.spend),isChange:true,inv:true},
+    {label:'支出 YoY',val:pctChange(cur.spend,yoyD.spend),isChange:true,inv:true},
+    {label:'ROAS MoM',val:pctChange(cur.roas,prevD.roas),isChange:true},
+    {label:'ROAS YoY',val:pctChange(cur.roas,yoyD.roas),isChange:true},
+  ];
+  el.innerHTML=kpis.map(k=>{
+    if(k.isChange){if(k.val===null)return`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="font-size:15px;color:var(--muted)">—</div></div>`;const n=parseFloat(k.val);const good=k.inv?n<0:n>0;return`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="font-size:18px;color:${good?'#1D9E75':'var(--red)'}">${n>0?'▲':'▼'}${Math.abs(n)}%</div></div>`;}
+    if(!cur.spend&&!cur.roas)return`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="color:var(--muted)">—</div></div>`;
+    const v=k.val||0;return`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val">${k.fmt(v)}</div><div class="kpi-mom">${momBadge(pctChange(v,k.prev))} MoM &nbsp;${momBadge(pctChange(v,k.yoy))} YoY</div></div>`;
+  }).join('');
+}
+
+// ─── 問題診斷 ────────────────────────────────────────────────────────
+function getIssues(p){const m=cm();return(db[m]&&db[m][p]&&db[m][p]._issues)||[]}
+function saveIssues(p,iss){const m=cm();if(!db[m])db[m]={};if(!db[m][p])db[m][p]={};db[m][p]._issues=iss;localStorage.setItem(SK,JSON.stringify(db));}
+function addIssue(p){const px=PX[p];const txt=document.getElementById(px+'_iss_txt').value.trim();const pri=document.getElementById(px+'_iss_pri').value;if(!txt)return;const iss=getIssues(p);iss.push({pri,txt,done:false});saveIssues(p,iss);document.getElementById(px+'_iss_txt').value='';renderIssues(p);}
+function toggleIssue(p,i){const iss=getIssues(p);iss[i].done=!iss[i].done;saveIssues(p,iss);renderIssues(p);}
+function deleteIssue(p,i){const iss=getIssues(p);iss.splice(i,1);saveIssues(p,iss);renderIssues(p);}
+function renderIssues(p){
+  const px=PX[p];const el=document.getElementById(px+'_issues');if(!el)return;
+  const iss=getIssues(p);
+  if(!iss.length){el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:6px 0">尚無問題，點「+ 新增」記錄問題</div>';return;}
+  el.innerHTML=iss.map((it,i)=>`<div class="issue-item" style="${it.done?'opacity:.5':''}"><div class="issue-dot dot-${it.pri}"></div><div class="issue-text" style="${it.done?'text-decoration:line-through':''}">${it.txt} <span style="font-size:10px;color:var(--muted)">${it.pri==='red'?'立即':it.pri==='amber'?'本週':'本月'}</span></div><div style="display:flex;gap:4px;flex-shrink:0"><button onclick="toggleIssue('${p}',${i})" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted)">${it.done?'↩':'✓'}</button><button onclick="deleteIssue('${p}',${i})" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--red)">✕</button></div></div>`).join('');
+}
+
+// ─── Momo 商品明細 ────────────────────────────────────────────────────
+function getMomoItems(){const m=cm();return(db[m]&&db[m].momo&&db[m].momo._items)||[]}
+function saveMomoItems(items){const m=cm();if(!db[m])db[m]={};if(!db[m].momo)db[m].momo={};db[m].momo._items=items;localStorage.setItem(SK,JSON.stringify(db));}
+function addMomoItem(){const items=getMomoItems();items.push({name:'新品項',days:0,spend:0,orders:0,sales:0});saveMomoItems(items);renderMomoItems();}
+function updateMomoItem(i,f,v){const items=getMomoItems();items[i][f]=f==='name'?v:parseFloat(v)||0;saveMomoItems(items);renderMomoItems();}
+function deleteMomoItem(i){const items=getMomoItems();items.splice(i,1);saveMomoItems(items);renderMomoItems();}
+function renderMomoItems(){
+  const items=getMomoItems();const tbody=document.getElementById('momoItemsTbody');const empty=document.getElementById('momoItemsEmpty');if(!tbody)return;
+  if(!items.length){tbody.innerHTML='';if(empty)empty.style.display='block';return;}if(empty)empty.style.display='none';
+  const maxR=Math.max(...items.map(it=>it.spend>0?it.sales/it.spend:0),1);
+  tbody.innerHTML=items.map((it,i)=>{const roas=it.spend>0?(it.sales/it.spend).toFixed(2):'-';const daily=it.days>0?(it.spend/it.days).toFixed(0):'-';const rn=parseFloat(roas)||0;const bw=Math.round(rn/maxR*80);const bc=rn>=5?'#1D9E75':rn>=2?'#EF9F27':'#ef4444';return`<tr><td><input style="border:none;background:transparent;color:var(--text);font-size:12px;width:90px" value="${it.name}" onchange="updateMomoItem(${i},'name',this.value)"></td><td><input type="number" style="border:none;background:transparent;color:var(--text);font-size:12px;width:44px;text-align:right" value="${it.days||''}" placeholder="0" onchange="updateMomoItem(${i},'days',this.value)"></td><td><input type="number" style="border:none;background:transparent;color:var(--text);font-size:12px;width:64px;text-align:right" value="${it.spend||''}" placeholder="0" onchange="updateMomoItem(${i},'spend',this.value)"></td><td style="color:var(--muted)">$${daily}</td><td><input type="number" style="border:none;background:transparent;color:var(--text);font-size:12px;width:44px;text-align:right" value="${it.orders||''}" placeholder="0" onchange="updateMomoItem(${i},'orders',this.value)"></td><td><input type="number" style="border:none;background:transparent;color:var(--text);font-size:12px;width:74px;text-align:right" value="${it.sales||''}" placeholder="0" onchange="updateMomoItem(${i},'sales',this.value)"></td><td><span class="roas-bar" style="width:${bw}px;background:${bc}"></span> <span style="font-weight:600;color:${bc}">${roas}</span></td><td><button onclick="deleteMomoItem(${i})" style="border:none;background:none;cursor:pointer;color:var(--red);font-size:12px">✕</button></td></tr>`;}).join('');
+}
+
+// ─── 資料管理中心 ────────────────────────────────────────────────────
+function renderDataManager(){
+  const el=document.getElementById('dmContent');if(!el)return;
+  const months=Object.keys(db).sort().reverse();
+  const ps=['google','meta','criteo','shopee','momo'];
+  if(!months.length){el.innerHTML=`<div class="dm-empty">尚無任何資料<br><br><button class="btn btn-green" onclick="openImport()">⬆ 匯入第一筆資料</button></div>`;return;}
+  el.innerHTML=months.map(m=>{
+    const md=db[m]||{};
+    const active=ps.filter(p=>{const d=md[p]||{};return Object.keys(d).filter(k=>!k.startsWith('_')).length>0;});
+    const totalSpend=active.reduce((s,p)=>(s+(md[p]?.spend||0)),0);
+    const rows=active.map(p=>{
+      const d=md[p]||{};const metrics=[];
+      if(d.spend)metrics.push(`<span class="dm-metric">支出 <strong>$${Math.round(d.spend).toLocaleString()}</strong></span>`);
+      if(d.roas)metrics.push(`<span class="dm-metric">ROAS <strong>${d.roas.toFixed(2)}x</strong></span>`);
+      if(d.clicks)metrics.push(`<span class="dm-metric">點擊 <strong>${Math.round(d.clicks).toLocaleString()}</strong></span>`);
+      if(d.conv||d.orders)metrics.push(`<span class="dm-metric">轉換 <strong>${d.conv||d.orders||0}</strong></span>`);
+      return`<div class="dm-platform-row"><div class="dm-pname"><span class="tag ${p}-b">${PEMOJI[p]} ${PNAMES[p]}</span></div><div class="dm-metrics">${metrics.join('')||'<span style="color:var(--muted)">無數據</span>'}</div><div class="dm-actions"><button class="dm-btn dm-btn-move" onclick="openMoveModal('${m}','${p}')">📦 移到其他月份</button><button class="dm-btn dm-btn-del" onclick="openDeleteModal('${m}','${p}')">🗑 刪除</button></div></div>`;
+    }).join('');
+    return`<div class="dm-month-block"><div class="dm-month-header"><div class="dm-month-label">${ml(m)}</div><div class="dm-month-total">共 ${active.length} 個平台・總支出 $${Math.round(totalSpend).toLocaleString()}</div><button class="dm-btn dm-btn-del" onclick="openDeleteMonthModal('${m}')" style="margin-left:8px">🗑 刪除整月</button></div>${rows||'<div style="padding:12px 16px;color:var(--muted);font-size:12px">此月份無數據</div>'}</div>`;
+  }).join('');
+}
+
+// ─── 移動資料 ────────────────────────────────────────────────────────
+function openMoveModal(month,platform){
+  moveState={month,platform};
+  document.getElementById('moveFrom').value=month;
+  document.getElementById('moveTo').value=month;
+  document.getElementById('moveDesc').textContent=`將 ${ml(month)} 的 ${PNAMES[platform]} 資料移動到另一個月份`;
+  document.getElementById('moveWarning').classList.remove('show');
+  document.getElementById('moveModal').classList.add('open');
+}
+function checkMoveConflict(){
+  const to=document.getElementById('moveTo').value;const{month,platform}=moveState;
+  const has=db[to]&&db[to][platform]&&Object.keys(db[to][platform]).filter(k=>!k.startsWith('_')).length>0;
+  document.getElementById('moveWarning').classList.toggle('show',has&&to!==month);
+}
+function closeMoveModal(){document.getElementById('moveModal').classList.remove('open');}
+function executeMove(){
+  const{month,platform}=moveState;const to=document.getElementById('moveTo').value;const del=document.getElementById('moveDeleteSrc').checked;
+  if(!to||to===month){toast('請選擇不同的目標月份');return;}
+  if(!db[month]||!db[month][platform]){toast('來源資料不存在');return;}
+  if(!db[to])db[to]={};
+  db[to][platform]=JSON.parse(JSON.stringify(db[month][platform]));
+  if(del){delete db[month][platform];if(Object.keys(db[month]).length===0)delete db[month];}
+  localStorage.setItem(SK,JSON.stringify(db));closeMoveModal();renderDataManager();renderAll();
+  toast(`${PNAMES[platform]} ${ml(month)} → ${ml(to)} 移動完成`);
+}
+
+// ─── 刪除資料 ────────────────────────────────────────────────────────
+function openDeleteModal(month,platform){
+  deleteState={month,platform,type:'platform'};
+  document.getElementById('deleteDesc').innerHTML=`確定要刪除 <strong>${ml(month)}</strong> 的 <strong>${PNAMES[platform]}</strong> 資料嗎？<br><br><span style="color:var(--red);font-size:12px">此操作無法復原，建議先匯出 JSON 備份。</span>`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function openDeleteMonthModal(month){
+  deleteState={month,platform:'',type:'month'};
+  const ps=['google','meta','criteo','shopee','momo'];
+  const active=ps.filter(p=>db[month]&&db[month][p]&&Object.keys(db[month][p]).filter(k=>!k.startsWith('_')).length>0);
+  document.getElementById('deleteDesc').innerHTML=`確定要刪除 <strong>${ml(month)}</strong> 整月的所有資料嗎？<br><br>包含：${active.map(p=>PNAMES[p]).join('、')}<br><br><span style="color:var(--red);font-size:12px">此操作無法復原，建議先匯出 JSON 備份。</span>`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal(){document.getElementById('deleteModal').classList.remove('open');}
+function executeDelete(){
+  const{month,platform,type}=deleteState;
+  if(type==='platform'){if(db[month])delete db[month][platform];if(db[month]&&Object.keys(db[month]).length===0)delete db[month];toast(`${PNAMES[platform]} ${ml(month)} 已刪除`);}
+  else{delete db[month];toast(`${ml(month)} 整月資料已刪除`);}
+  localStorage.setItem(SK,JSON.stringify(db));closeDeleteModal();renderDataManager();renderAll();
+}
+function confirmClearAll(){if(confirm('確定要清除所有月份的所有資料嗎？此操作無法復原！')){db={};localStorage.setItem(SK,JSON.stringify(db));renderDataManager();renderAll();toast('所有資料已清除');}}
+
+// ─── 頁面切換 ────────────────────────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const map={overview:0,google:1,meta:2,criteo:3,shopee:4,momo:5,datamanager:6};
+  document.querySelectorAll('.nav-tab')[map[id]].classList.add('active');
+  if(id==='datamanager')renderDataManager();else renderAll();
+}
+
+// ─── 資料讀寫 ────────────────────────────────────────────────────────
+function loadF(){
+  const m=cm();
+  Object.keys(PF).forEach(p=>{const px=PX[p];const entry=(db[m]&&db[m][p])||{};PF[p].forEach(f=>{const el=document.getElementById(px+'_'+f);if(el)el.value=entry[f]!==undefined?entry[f]:''});});
+  const lmap={google:'gLabel',meta:'mLabel',criteo:'cLabel',shopee:'sLabel',momo:'moLabel'};
+  Object.entries(lmap).forEach(([p,lid])=>{const el=document.getElementById(lid);if(el)el.textContent=ml(cm());});
+  Object.entries(NOTES).forEach(([p,nid])=>{const el=document.getElementById(nid);if(el)el.value=(db[m]&&db[m][p]&&db[m][p]._note)||'';});
+  ['google','meta','criteo','shopee','momo'].forEach(p=>{renderIssues(p);renderKPI(p);});
+  renderMomoItems();
+}
+
+function saveAll(){
+  const m=cm();if(!db[m])db[m]={};
+  Object.keys(PF).forEach(p=>{
+    const px=PX[p];const entry=db[m][p]||{};
+    PF[p].forEach(f=>{const el=document.getElementById(px+'_'+f);if(el&&el.value!=='')entry[f]=parseFloat(el.value)||0;});
+    const ne=document.getElementById(NOTES[p]);if(ne)entry._note=ne.value;
+    if(db[m][p]&&db[m][p]._issues)entry._issues=db[m][p]._issues;
+    if(p==='momo'&&db[m].momo&&db[m].momo._items)entry._items=db[m].momo._items;
+    db[m][p]=entry;
+  });
+  localStorage.setItem(SK,JSON.stringify(db));renderAll();renderDataManager();toast('已儲存 '+ml(m));
+}
+
+function exportD(){const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ads_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
+
+// ─── 匯入 Modal ──────────────────────────────────────────────────────
+function openImport(){document.getElementById('importModal').classList.add('open');const s=localStorage.getItem(AK)||'';if(s)document.getElementById('apiKeyInput').value=s;}
+function closeImport(){
+  document.getElementById('importModal').classList.remove('open');pendingImport=null;
+  document.getElementById('importConfirmBtn').style.display='none';document.getElementById('importStatus').innerHTML='';
+  document.getElementById('autoPreview').textContent='上傳後顯示辨識結果...';
+  document.getElementById('dateConfirm').classList.remove('show');
+  document.getElementById('ssStatus').innerHTML='';document.getElementById('ssPreview').textContent='AI 讀取結果...';
+}
+function switchImportTab(t){
+  ['auto','json','screenshot'].forEach(id=>{document.getElementById('itab-'+id).style.display=id===t?'block':'none';});
+  document.querySelectorAll('.itab').forEach((el,i)=>{el.classList.toggle('active',['auto','json','screenshot'][i]===t);});
+  pendingImport=null;document.getElementById('importConfirmBtn').style.display='none';document.getElementById('importStatus').innerHTML='';
+  document.getElementById('dateConfirm').classList.remove('show');
+}
+function dz(e){e.preventDefault();e.currentTarget.classList.add('over')}
+function dropFile(e,type){e.preventDefault();e.currentTarget.classList.remove('over');const f=e.dataTransfer.files[0];if(!f)return;if(type==='auto')processAutoFile(f);else if(type==='json')processJson(f);else if(type==='ss')processScreenshot(f);}
+function saveApiKey(){const k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem(AK,k);toast('API Key 已儲存')}}
+
+// ─── 自動辨識 ────────────────────────────────────────────────────────
+function handleAutoFile(e){const f=e.target.files[0];if(f)processAutoFile(f);e.target.value='';}
+function processAutoFile(f){
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='json'){processJson(f);return;}
+  if(ext==='xlsx'||ext==='xls'){processMomoExcel(f);return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    const raw=ev.target.result.replace(/^\uFEFF/,'');const lines=raw.split('\n').filter(l=>l.trim());
+    const isSh=lines.slice(0,5).some(l=>l.includes('Shopee台灣')||l.includes('所有CPC成效報告'));
+    const hdr=parseCsvLine(lines[0]||'');
+    const isCr=hdr.some(h=>h.toLowerCase().includes('campaign'))&&hdr.some(h=>h.toLowerCase().includes('displays'));
+    if(isSh){processShopeeCsvContent(raw,lines);return;}
+    if(isCr){processCriteoContent(raw,lines);return;}
+    setStatus('importStatus','無法辨識格式，請確認是 Criteo CSV 或蝦皮 CSV','err');
+  };r.readAsText(f,'UTF-8');
+}
+
+function showDateConfirm(dm,src){
+  document.getElementById('dateConfirm').classList.add('show');
+  document.getElementById('detectedDateLabel').textContent=ml(dm)||'無法辨識';
+  document.getElementById('detectedMonthInput').value=dm||cm();
+  document.getElementById('dateSource').textContent='來源：'+src;
+}
+function getTargetMonth(){return document.getElementById('detectedMonthInput').value||cm();}
+
+// ─── 蝦皮 CSV ────────────────────────────────────────────────────────
+function processShopeeCsvContent(raw,lines){
+  let dm=null,ds='';
+  for(let i=0;i<Math.min(lines.length,10);i++){const m=lines[i].match(/期間[,，]\s*(\d{4})\/(\d{2})\/\d{2}\s*-/);if(m){dm=`${m[1]}-${m[2]}`;ds=`第${i+1}行期間欄`;break;}}
+  if(dm)showDateConfirm(dm,ds);else document.getElementById('dateConfirm').classList.remove('show');
+  let hi=-1;for(let i=0;i<lines.length;i++){if(lines[i].includes('點擊數')&&lines[i].includes('花費')){hi=i;break;}}
+  if(hi<0){setStatus('importStatus','找不到欄位標題行','err');return;}
+  const headers=parseCsvLine(lines[hi]);const dataRows=[];
+  for(let i=hi+1;i<lines.length;i++){const row=parseCsvLine(lines[i]);if(row.length>5&&row[0]&&!isNaN(parseInt(row[0])))dataRows.push(row);}
+  if(!dataRows.length){setStatus('importStatus','找不到數據行','err');return;}
+  const hx=n=>headers.findIndex(h=>h.includes(n));
+  let tC=0,tO=0,tS=0,tSp=0;dataRows.forEach(row=>{tC+=num(row[hx('點擊數')]);tO+=num(row[hx('轉換數')]);tS+=num(row[hx('銷售金額')]);tSp+=num(row[hx('花費')]);});
+  const roas=tSp>0?parseFloat((tS/tSp).toFixed(2)):0;
+  const entry={clicks:Math.round(tC),orders:Math.round(tO),sales:parseFloat(tS.toFixed(2)),spend:parseFloat(tSp.toFixed(2)),roas};
+  document.getElementById('autoPreview').textContent=`🛒 辨識為：蝦皮 CPC 成效報告\n📅 ${dm?ml(dm):'請手動選擇月份'}\n\n✅ ${dataRows.length} 個廣告活動加總：\n  點擊數：${entry.clicks.toLocaleString()}\n  訂單數：${entry.orders}\n  銷售金額：NT$${entry.sales.toLocaleString()}\n  廣告支出：NT$${entry.spend.toLocaleString()}\n  ROAS：${roas}x\n\n⚠️ 蝦皮訂單數不準，建議以後台實際數據為主`;
+  pendingImport={type:'platform',platform:'shopee',entry,detectedMonth:dm};
+  setStatus('importStatus','讀取成功！確認月份後點「套用數據」','ok');document.getElementById('importConfirmBtn').style.display='inline-block';
+}
+
+// ─── Criteo CSV ──────────────────────────────────────────────────────
+function processCriteoContent(raw,lines){
+  const headers=parseCsvLine(lines[0]);let dm=null,ds='';
+  const dcIdx=headers.findIndex(h=>h.toLowerCase().includes('start date')||h.toLowerCase().includes('date'));
+  if(dcIdx>=0&&lines.length>1){const fr=parseCsvLine(lines[1]);const dStr=fr[dcIdx]||'';const m=dStr.match(/(\d{4})[-\/](\d{2})/);if(m){dm=`${m[1]}-${m[2]}`;ds=`欄位"${headers[dcIdx]}"`}}
+  if(!dm){for(let i=1;i<Math.min(lines.length,5);i++){const m=lines[i].match(/[",](\d{2})(\d{2})(\d{2})[_-]/);if(m){const mm=parseInt(m[2]);if(mm>=1&&mm<=12){dm=`20${m[1]}-${m[2].padStart(2,'0')}`;ds=`廣告名稱日期代碼 ${m[1]}${m[2]}${m[3]}`;break;}}}}
+  showDateConfirm(dm||cm(),dm?ds:'無法辨識，請手動選擇');
+  const hi=n=>headers.findIndex(h=>h.toLowerCase().includes(n.toLowerCase()));
+  const cD=hi('Displays'),cC=hi('Clicks'),cV=hi('Visits'),cCost=hi('Cost'),cS=hi('Sales PC30D'),cR=hi('Revenue PC30D');
+  if(cCost<0||cC<0){setStatus('importStatus','找不到必要欄位（Cost, Clicks）','err');return;}
+  let tD=0,tC=0,tV=0,tCost=0,tS=0,tR=0,cnt=0;
+  for(let i=1;i<lines.length;i++){const row=parseCsvLine(lines[i]);if(row.length<3)continue;tD+=num(row[cD]);tC+=num(row[cC]);tV+=num(row[cV]);tCost+=num(row[cCost]);tS+=num(row[cS]);tR+=num(row[cR]);cnt++;}
+  if(!cnt){setStatus('importStatus','找不到數據行','err');return;}
+  const roas=tCost>0?parseFloat((tR/tCost).toFixed(2)):0;const cpc=tC>0?parseFloat((tCost/tC).toFixed(2)):0;const ctr=tD>0?parseFloat((tC/tD*100).toFixed(4)):0;const cvr=tC>0?parseFloat((tS/tC*100).toFixed(4)):0;
+  const entry={displays:Math.round(tD),clicks:Math.round(tC),visits:Math.round(tV),spend:parseFloat(tCost.toFixed(2)),cpc,ctr,conv:Math.round(tS),revenue:parseFloat(tR.toFixed(2)),roas,cvr};
+  document.getElementById('autoPreview').textContent=`🟠 辨識為：Criteo Custom Report\n📅 ${dm?ml(dm):'請手動選擇月份'}\n\n✅ ${cnt} 個廣告組加總：\n  曝光數：${entry.displays.toLocaleString()}\n  點擊數：${entry.clicks.toLocaleString()}\n  GA4造訪：${entry.visits.toLocaleString()}\n  廣告支出：NT$${entry.spend.toLocaleString()}\n  轉換數：${entry.conv}\n  營收：NT$${entry.revenue.toLocaleString()}\n  ROAS（Revenue/Cost）：${roas}x\n\n⚠️ ROAS 為總 Revenue ÷ 總 Cost 重新計算`;
+  pendingImport={type:'platform',platform:'criteo',entry,detectedMonth:dm};
+  setStatus('importStatus','讀取成功！確認月份後點「套用數據」','ok');document.getElementById('importConfirmBtn').style.display='inline-block';
+}
+
+// ─── Momo Excel ──────────────────────────────────────────────────────
+function processMomoExcel(f){
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+      if(rows.length<2){setStatus('importStatus','沒有數據','err');return;}
+      let headerRow=-1;const colMap={};
+      for(let i=0;i<Math.min(rows.length,5);i++){const row=rows[i].map(c=>(c||'').toString());if(row.some(c=>c.includes('點擊數'))){headerRow=i;row.forEach((h,idx)=>{if(h.includes('曝光'))colMap.impressions=idx;else if(h.includes('點擊數'))colMap.clicks=idx;else if(h.includes('已花費')||h.includes('花費'))colMap.spend=idx;else if(h.includes('加入購物車'))colMap.cart=idx;else if(h.includes('訂單數'))colMap.orders=idx;else if(h.includes('商品訂購金額'))colMap.order_val=idx;});break;}}
+      if(headerRow<0){setStatus('importStatus','找不到欄位標題（曝光數、點擊數、已花費...）','err');return;}
+      let dm=null,ds='';
+      const firstData=rows[headerRow+1];
+      if(firstData&&firstData[0]){const m=firstData[0].toString().match(/(\d{4})[-\/](\d{2})/);if(m){dm=`${m[1]}-${m[2]}`;ds=`首筆日期 ${firstData[0]}`;}}
+      showDateConfirm(dm||cm(),dm?ds:'無法辨識，請手動選擇');
+      let tI=0,tC=0,tSp=0,tCart=0,tO=0,tV=0,cnt=0;
+      for(let i=headerRow+1;i<rows.length;i++){const row=rows[i];if(!row||!row[0])continue;tI+=numX(row[colMap.impressions]);tC+=numX(row[colMap.clicks]);tSp+=numX(row[colMap.spend]);tCart+=numX(row[colMap.cart]);tO+=numX(row[colMap.orders]);tV+=numX(row[colMap.order_val]);cnt++;}
+      if(!cnt){setStatus('importStatus','找不到數據行','err');return;}
+      const roas=tSp>0?parseFloat((tV/tSp).toFixed(2)):0;const cpc=tC>0?parseFloat((tSp/tC).toFixed(2)):0;const cvr=tC>0?parseFloat((tO/tC*100).toFixed(2)):0;const cartCpa=tCart>0?parseFloat((tSp/tCart).toFixed(2)):0;
+      const entry={clicks:Math.round(tC),orders:Math.round(tO),cart:Math.round(tCart),cpc,order_val:parseFloat(tV.toFixed(2)),cvr,spend:parseFloat(tSp.toFixed(2)),roas,cart_cpa:cartCpa};
+      document.getElementById('autoPreview').textContent=`🟣 辨識為：Momo RMN 廣告報表\n📅 ${dm?ml(dm):'請手動選擇月份'}\n\n✅ ${cnt} 天數據加總：\n  廣告支出：NT$${entry.spend.toLocaleString()}\n  點擊數：${entry.clicks.toLocaleString()}\n  訂單數：${entry.orders}\n  購物車數：${entry.cart}\n  訂購金額：NT$${entry.order_val.toLocaleString()}\n  ROAS：${roas}x\n  CVR：${cvr}%\n  每次購物車成本：NT$${cartCpa}`;
+      pendingImport={type:'platform',platform:'momo',entry,detectedMonth:dm};
+      setStatus('importStatus','讀取成功！確認月份後點「套用數據」','ok');document.getElementById('importConfirmBtn').style.display='inline-block';
+    }catch(e){setStatus('importStatus','解析失敗：'+e.message,'err')}
+  };r.readAsArrayBuffer(f);
+}
+
+// ─── JSON ────────────────────────────────────────────────────────────
+function handleJson(e){const f=e.target.files[0];if(f)processJson(f);e.target.value='';}
+function processJson(f){const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);pendingImport={type:'json',data:d};setStatus('importStatus','讀取成功！點「套用數據」覆蓋所有現有數據','ok');document.getElementById('importConfirmBtn').style.display='inline-block';}catch{setStatus('importStatus','格式錯誤，請確認是正確的 JSON 備份檔','err')}};r.readAsText(f);}
+
+// ─── 截圖 AI ─────────────────────────────────────────────────────────
+function handleScreenshot(e){const f=e.target.files[0];if(f)processScreenshot(f);e.target.value='';}
+function processScreenshot(f){
+  const apiKey=document.getElementById('apiKeyInput').value.trim()||localStorage.getItem(AK)||'';
+  if(!apiKey){setStatus('ssStatus','請先輸入 Claude API Key','err');return;}
+  const platform=document.getElementById('ssPlatform').value;
+  setStatus('ssStatus','AI 讀取中，請稍候...','loading');
+  const r=new FileReader();
+  r.onload=async ev=>{
+    const b64=ev.target.result.split(',')[1];
+    try{
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:f.type||'image/png',data:b64}},{type:'text',text:`這是${PNAMES[platform]}廣告後台截圖。提取所有廣告指標和日期資訊，只回傳JSON，不要其他文字。\nKey: spend,roas,clicks,impressions,displays,visits,ctr,cpc,conv,revenue,cvr,cpa,new_users,orders,sales,cart,order_val,cart_cpa,ad_pct,conv_cost,atc,cvalue,conv_roas,conv_spend,other_spend,cvalue_all,aov,detected_month（格式YYYY-MM，如能從截圖辨識月份）\n數字去掉符號和千位逗號，百分比去掉%。`}]}]})});
+      const data=await resp.json();
+      if(data.error){setStatus('ssStatus','API 錯誤：'+data.error.message,'err');return;}
+      const full=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+      const dm=full.detected_month;delete full.detected_month;
+      if(dm)showDateConfirm(dm,'AI 從截圖辨識');
+      document.getElementById('ssPreview').textContent='AI 識別結果：\n'+Object.entries(full).map(([k,v])=>`  ${k}: ${v}`).join('\n');
+      pendingImport={type:'platform',platform,entry:full,detectedMonth:dm||null};
+      setStatus('ssStatus','','ok');setStatus('importStatus',`AI 成功讀取 ${Object.keys(full).length} 個指標，確認月份後套用`,'ok');
+      document.getElementById('importConfirmBtn').style.display='inline-block';
+    }catch(e){setStatus('ssStatus','讀取失敗：'+e.message,'err')}
+  };r.readAsDataURL(f);
+}
+
+function confirmImport(){
+  if(!pendingImport)return;
+  const targetMonth=getTargetMonth();
+  if(pendingImport.type==='json'){db=pendingImport.data;localStorage.setItem(SK,JSON.stringify(db));loadF();renderAll();renderDataManager();toast('JSON 數據已全部匯入');}
+  else{
+    if(!db[targetMonth])db[targetMonth]={};
+    const p=pendingImport.platform;if(!db[targetMonth][p])db[targetMonth][p]={};
+    Object.assign(db[targetMonth][p],pendingImport.entry);
+    localStorage.setItem(SK,JSON.stringify(db));
+    document.getElementById('selMonth').value=targetMonth;
+    loadF();renderAll();renderDataManager();
+    toast(`${PNAMES[p]} 數據已套用至 ${ml(targetMonth)}`);
+  }
+  closeImport();
+}
+
+// ─── 工具函式 ────────────────────────────────────────────────────────
+function parseCsvLine(line){const r=[];let c='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
+function num(v){if(!v)return 0;return parseFloat(v.toString().replace(/,/g,'').replace('%','').replace('$','').replace('NT','').trim())||0;}
+function numX(v){if(v===undefined||v===null||v==='')return 0;return parseFloat(v.toString().replace(/,/g,'').replace('%',''))||0;}
+function setStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;if(!msg){el.innerHTML='';return;}el.innerHTML=`<div class="status-msg status-${type}">${msg}</div>`;}
+function toast(msg){let t=document.getElementById('_toast');if(!t){t=document.createElement('div');t.id='_toast';Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',background:'#1a1a18',color:'#fff',padding:'9px 18px',borderRadius:'8px',fontSize:'12px',zIndex:9999,transition:'opacity .3s',boxShadow:'0 4px 12px rgba(0,0,0,.2)'});document.body.appendChild(t)}t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2400);}
+
+// ─── Charts ──────────────────────────────────────────────────────────
+function isDark(){return document.documentElement.getAttribute('data-theme')==='dark'}
+function gc(){return isDark()?'#888780':'#6b6966'}
+function gb(){return isDark()?'#3a3a38':'#e5e3dc'}
+function mkLine(id,labels,datasets){const ctx=document.getElementById(id);if(!ctx)return;if(ctx._c)ctx._c.destroy();ctx._c=new Chart(ctx,{type:'line',data:{labels,datasets:datasets.map(d=>({...d,tension:.35,pointRadius:3,borderWidth:2,fill:false}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:datasets.length>1,labels:{font:{size:10},boxWidth:10,color:gc()}}},scales:{x:{ticks:{font:{size:10},color:gc()},grid:{color:gb()}},y:{ticks:{font:{size:10},color:gc()},grid:{color:gb()}}}}});}
+function mkBar(id,labels,values,colors){const ctx=document.getElementById(id);if(!ctx)return;if(ctx._c)ctx._c.destroy();ctx._c=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:colors||'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:gc()},grid:{color:gb()}},y:{ticks:{font:{size:10},color:gc()},grid:{color:gb()},beginAtZero:true}}}});}
+function mkPie(id,labels,values,colors){const ctx=document.getElementById(id);if(!ctx)return;if(ctx._c)ctx._c.destroy();ctx._c=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,color:gc()}}}}});}
+
+// ─── Render ───────────────────────────────────────────────────────────
+function renderAll(){renderOV();renderG();renderM();renderCR();renderSH();renderMO();['google','meta','criteo','shopee','momo'].forEach(p=>renderKPI(p));}
+
+function renderOV(){
+  const months=Object.keys(db).sort();const m=cm();const cur=db[m]||{};const ps=['google','meta','criteo','shopee','momo'];
+  document.getElementById('pSummary').innerHTML=ps.map(p=>{const d=cur[p]||{};const prev=getPD(prevMonth(m),p);const mom=pctChange(d.spend,prev.spend);return`<div class="pcard" onclick="showPage('${p}')"><div class="pname"><span class="tag ${p}-b">${PNAMES[p]}</span></div><div class="pspend">$${(d.spend||0).toLocaleString()}</div><div class="proas">ROAS ${(d.roas||0).toFixed(2)}x ${momBadge(mom)}</div></div>`}).join('');
+  mkPie('pieC',ps.map(p=>PNAMES[p]),ps.map(p=>(cur[p]||{}).spend||0),ps.map(p=>COLS[p]));
+  mkBar('roasBarC',ps.map(p=>PNAMES[p]),ps.map(p=>(cur[p]||{}).roas||0),ps.map(p=>COLS[p]));
+  mkLine('trendC',months.map(m=>ml(m)),ps.map(p=>({label:PNAMES[p],data:months.map(mo=>(db[mo]&&db[mo][p]&&db[mo][p].spend)||0),borderColor:COLS[p]})));
+  const rows=[];months.forEach(mo=>{ps.forEach(p=>{const d=(db[mo]&&db[mo][p])||{};if(!Object.keys(d).filter(k=>!k.startsWith('_')).length)return;const prev=getPD(prevMonth(mo),p);const yoy=getPD(prevYear(mo),p);rows.push(`<tr><td>${ml(mo)}</td><td><span class="tag ${p}-b">${PNAMES[p]}</span></td><td>$${(d.spend||0).toLocaleString()}</td>${momCell(d.spend,prev.spend,true)}${momCell(d.spend,yoy.spend,true)}<td class="${(d.roas||0)>=3?'good':'bad'}">${(d.roas||0).toFixed(2)}x</td><td>${d.conv||d.orders||'—'}</td><td>${d.cpc?'$'+d.cpc.toFixed(0):'—'}</td><td>${(d.cpa||d.cart_cpa)?'$'+(d.cpa||d.cart_cpa).toFixed(0):'—'}</td></tr>`)})});
+  document.getElementById('ovBody').innerHTML=rows.join('')||'<tr><td colspan="9" class="empty">尚無數據，請先輸入並儲存或匯入資料</td></tr>';
+}
+function renderG(){const M=Object.keys(db).sort();const L=M.map(m=>ml(m));const D=M.map(m=>(db[m]&&db[m].google)||{});const s=f=>D.map(d=>d[f]||0);mkLine('g_rC',L,[{label:'ROAS',data:s('roas'),borderColor:COLS.google}]);mkLine('g_sC',L,[{label:'支出',data:s('spend'),borderColor:COLS.google}]);mkLine('g_cC',L,[{label:'CPA',data:s('cpa'),borderColor:COLS.google}]);mkLine('g_trC',L,[{label:'CTR%',data:s('ctr'),borderColor:'#378ADD'},{label:'CVR%',data:s('cvr'),borderColor:'#1D9E75'}]);document.getElementById('gHist').innerHTML=M.map((m,i)=>{const prev=getPD(prevMonth(m),'google');const yoy=getPD(prevYear(m),'google');return`<tr><td>${ml(m)}</td><td>$${(D[i].spend||0).toLocaleString()}</td>${momCell(D[i].spend,prev.spend,true)}${momCell(D[i].spend,yoy.spend,true)}<td>${(D[i].impressions||0).toLocaleString()}</td><td>${(D[i].clicks||0).toLocaleString()}</td><td>${(D[i].ctr||0).toFixed(2)}%</td><td>$${(D[i].cpc||0).toFixed(0)}</td><td>${D[i].conv||0}</td><td class="${(D[i].roas||0)>=3?'good':'bad'}">${(D[i].roas||0).toFixed(2)}x</td><td>$${(D[i].cpa||0).toFixed(0)}</td></tr>`}).join('')||'<tr><td colspan="11" class="empty">尚無數據</td></tr>';}
+function renderM(){const M=Object.keys(db).sort();const L=M.map(m=>ml(m));const D=M.map(m=>(db[m]&&db[m].meta)||{});const s=f=>D.map(d=>d[f]||0);mkLine('m_rC',L,[{label:'ROAS',data:s('roas'),borderColor:COLS.meta}]);mkLine('m_sC',L,[{label:'支出',data:s('spend'),borderColor:COLS.meta}]);mkLine('m_cC',L,[{label:'CPA',data:s('cpa'),borderColor:COLS.meta}]);mkLine('m_rrC',L,[{label:'整體ROAS',data:s('roas'),borderColor:COLS.meta},{label:'轉換廣告ROAS',data:s('conv_roas'),borderColor:'#1D9E75'}]);document.getElementById('mHist').innerHTML=M.map((m,i)=>{const prev=getPD(prevMonth(m),'meta');const yoy=getPD(prevYear(m),'meta');return`<tr><td>${ml(m)}</td><td>$${(D[i].spend||0).toLocaleString()}</td>${momCell(D[i].spend,prev.spend,true)}${momCell(D[i].spend,yoy.spend,true)}<td>${D[i].conv||0}</td><td>$${(D[i].conv_cost||0).toFixed(0)}</td><td class="${(D[i].roas||0)>=3?'good':'bad'}">${(D[i].roas||0).toFixed(2)}x</td><td>$${(D[i].cpa||0).toFixed(0)}</td><td>${(D[i].conv_roas||0).toFixed(2)}x</td></tr>`}).join('')||'<tr><td colspan="9" class="empty">尚無數據</td></tr>';}
+function renderCR(){const M=Object.keys(db).sort();const L=M.map(m=>ml(m));const D=M.map(m=>(db[m]&&db[m].criteo)||{});const s=f=>D.map(d=>d[f]||0);mkLine('cr_rC',L,[{label:'ROAS',data:s('roas'),borderColor:COLS.criteo}]);mkLine('cr_sC',L,[{label:'支出',data:s('spend'),borderColor:COLS.criteo}]);mkLine('cr_cC',L,[{label:'每次新客成本',data:s('cpa_new'),borderColor:COLS.criteo}]);mkLine('cr_uC',L,[{label:'Clicks',data:s('clicks'),borderColor:COLS.criteo},{label:'GA4造訪',data:s('visits'),borderColor:'#1D9E75'}]);document.getElementById('crHist').innerHTML=M.map((m,i)=>{const prev=getPD(prevMonth(m),'criteo');const yoy=getPD(prevYear(m),'criteo');return`<tr><td>${ml(m)}</td><td>$${(D[i].spend||0).toLocaleString()}</td>${momCell(D[i].spend,prev.spend,true)}${momCell(D[i].spend,yoy.spend,true)}<td>${(D[i].displays||0).toLocaleString()}</td><td>${(D[i].clicks||0).toLocaleString()}</td><td>${(D[i].visits||0).toLocaleString()}</td><td>${D[i].conv||0}</td><td>$${(D[i].revenue||0).toLocaleString()}</td><td class="${(D[i].roas||0)>=3?'good':'bad'}">${(D[i].roas||0).toFixed(2)}x</td><td>$${(D[i].cpa_new||0).toFixed(0)}</td></tr>`}).join('')||'<tr><td colspan="11" class="empty">尚無數據</td></tr>';}
+function renderSH(){const M=Object.keys(db).sort();const L=M.map(m=>ml(m));const D=M.map(m=>(db[m]&&db[m].shopee)||{});const s=f=>D.map(d=>d[f]||0);mkLine('sh_rC',L,[{label:'ROAS',data:s('roas'),borderColor:COLS.shopee}]);mkLine('sh_sC',L,[{label:'支出',data:s('spend'),borderColor:COLS.shopee}]);mkLine('sh_pC',L,[{label:'廣告佔比%',data:s('ad_pct'),borderColor:'#854F0B'}]);mkLine('sh_slC',L,[{label:'銷售金額',data:s('sales'),borderColor:'#1D9E75'}]);document.getElementById('shHist').innerHTML=M.map((m,i)=>{const prev=getPD(prevMonth(m),'shopee');const yoy=getPD(prevYear(m),'shopee');return`<tr><td>${ml(m)}</td><td>$${(D[i].spend||0).toLocaleString()}</td>${momCell(D[i].spend,prev.spend,true)}${momCell(D[i].spend,yoy.spend,true)}<td>${(D[i].clicks||0).toLocaleString()}</td><td>${D[i].orders||0}</td><td>$${(D[i].sales||0).toLocaleString()}</td><td class="${(D[i].roas||0)>=3?'good':'bad'}">${(D[i].roas||0).toFixed(2)}x</td><td>${(D[i].ad_pct||0).toFixed(1)}%</td></tr>`}).join('')||'<tr><td colspan="9" class="empty">尚無數據</td></tr>';}
+function renderMO(){const M=Object.keys(db).sort();const L=M.map(m=>ml(m));const D=M.map(m=>(db[m]&&db[m].momo)||{});const s=f=>D.map(d=>d[f]||0);mkLine('mo_rC',L,[{label:'ROAS',data:s('roas'),borderColor:COLS.momo}]);mkLine('mo_sC',L,[{label:'支出',data:s('spend'),borderColor:COLS.momo}]);mkLine('mo_cvC',L,[{label:'CVR%',data:s('cvr'),borderColor:'#EF9F27'}]);mkLine('mo_cpC',L,[{label:'購物車成本',data:s('cart_cpa'),borderColor:COLS.momo}]);document.getElementById('moHist').innerHTML=M.map((m,i)=>{const prev=getPD(prevMonth(m),'momo');const yoy=getPD(prevYear(m),'momo');return`<tr><td>${ml(m)}</td><td>$${(D[i].spend||0).toLocaleString()}</td>${momCell(D[i].spend,prev.spend,true)}${momCell(D[i].spend,yoy.spend,true)}<td>${(D[i].clicks||0).toLocaleString()}</td><td>${D[i].orders||0}</td><td>$${(D[i].cpc||0).toFixed(0)}</td><td>${(D[i].cvr||0).toFixed(2)}%</td><td class="${(D[i].roas||0)>=3?'good':'bad'}">${(D[i].roas||0).toFixed(2)}x</td><td>$${(D[i].cart_cpa||0).toFixed(0)}</td></tr>`}).join('')||'<tr><td colspan="10" class="empty">尚無數據</td></tr>';}
+
+// ─── 初始化 ───────────────────────────────────────────────────────────
+function init(){
+  document.getElementById('selMonth').value=new Date().toISOString().slice(0,7);
+  loadF();renderAll();
+}
+if(sessionStorage.getItem('ad_auth')==='1'){init()}
+</script>
+</body>
+</html>
