@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>廣告數據儀表板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f8f7f4;--card:#fff;--border:#e5e3dc;--text:#1a1a18;--muted:#6b6966;--blue:#185FA5;--blue-l:#E6F1FB;--blue-m:#378ADD;--green:#3B6D11;--amber:#854F0B;--amber-l:#FAEEDA;--amber-m:#EF9F27;--red:#A32D2D;--red-l:#FCEBEB;--r:10px;--rs:6px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+#lockScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.lock-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:36px 32px;width:300px;text-align:center}
+.lock-icon{width:48px;height:48px;margin:0 auto 16px;background:var(--blue-l);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.lock-icon svg{width:22px;height:22px;stroke:#185FA5;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lock-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.lock-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.lock-input{width:100%;border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-size:14px;text-align:center;letter-spacing:2px;background:var(--card);color:var(--text);transition:border .15s;margin-bottom:10px}
+.lock-input:focus{outline:none;border-color:var(--blue-m)}
+.lock-btn{width:100%;padding:9px;border-radius:var(--rs);font-size:13px;cursor:pointer;border:none;background:var(--blue);color:#fff;font-weight:500;transition:background .15s}
+.lock-btn:hover{background:#0c447c}
+.lock-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px}
+#app{display:none}
+.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;overflow-x:auto}
+.nav-brand{font-size:14px;font-weight:600;padding:12px 14px 12px 0;border-right:1px solid var(--border);margin-right:6px;white-space:nowrap}
+.nav-tab{padding:12px 10px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;user-select:none}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.nav-logout{margin-left:auto;padding:6px 12px;font-size:11px;color:var(--muted);cursor:pointer;border:1px solid var(--border);border-radius:var(--rs);background:var(--card);white-space:nowrap}
+.nav-logout:hover{background:var(--bg)}
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar label{font-size:12px;color:var(--muted)}
+.toolbar input[type=month]{border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;background:var(--card);color:var(--text)}
+.btn{padding:5px 12px;border-radius:var(--rs);font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#0c447c}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.section-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pbadge{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.google-b{background:#E8F0FE;color:#1a56c4}
+.meta-b{background:#E7F3FF;color:#0765C5}
+.criteo-b{background:#FFF3E0;color:#E65100}
+.shopee-b{background:#FFF0F0;color:#D23E14}
+.momo-b{background:#F3E5F5;color:#7B1FA2}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.ftitle{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:500}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:11px;color:var(--muted)}
+.fg input{border:1px solid var(--border);border-radius:var(--rs);padding:6px 8px;font-size:12px;background:var(--card);color:var(--text);width:100%}
+.fg input:focus{outline:none;border-color:var(--blue-m)}
+.hfg .fg label{color:var(--amber);font-weight:500}
+.hfg .fg input{border-color:var(--amber-m);background:var(--amber-l)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.ctitle{font-size:11px;font-weight:500;margin-bottom:8px;color:var(--muted)}
+.cwrap{position:relative;height:160px}
+.cwrap-tall{position:relative;height:200px}
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg);padding:8px 10px;text-align:left;font-weight:500;color:var(--muted);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.tag{padding:1px 7px;border-radius:20px;font-size:10px;font-weight:500}
+.ov5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:border-color .15s}
+.pcard:hover{border-color:var(--blue-m)}
+.pcard .pname{margin-bottom:6px}
+.pcard .pspend{font-size:17px;font-weight:700}
+.pcard .proas{font-size:11px;color:var(--muted);margin-top:2px}
+.good{color:var(--green);font-weight:500}
+.bad{color:var(--red);font-weight:500}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.empty{text-align:center;padding:30px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="lock-title">廣告數據儀表板</div>
+    <div class="lock-sub">請輸入密碼以繼續</div>
+    <input type="password" class="lock-input" id="pwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')unlock()">
+    <button class="lock-btn" onclick="unlock()">進入</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<nav class="nav">
+  <div class="nav-brand">📊 廣告數據</div>
+  <div class="nav-tab active" onclick="showPage('overview')">總表</div>
+  <div class="nav-tab" onclick="showPage('google')">Google</div>
+  <div class="nav-tab" onclick="showPage('meta')">Meta</div>
+  <div class="nav-tab" onclick="showPage('criteo')">Criteo</div>
+  <div class="nav-tab" onclick="showPage('shopee')">Shopee</div>
+  <div class="nav-tab" onclick="showPage('momo')">Momo RMN</div>
+  <button class="nav-logout" onclick="logout()">登出</button>
+</nav>
+<div class="toolbar">
+  <label>月份</label>
+  <input type="month" id="selMonth" onchange="onMC()">
+  <button class="btn btn-primary" onclick="saveAll()">💾 儲存</button>
+  <button class="btn" onclick="exportD()">⬇ 匯出</button>
+  <button class="btn" onclick="document.getElementById('impF').click()">⬆ 匯入</button>
+  <input type="file" id="impF" accept=".json" style="display:none" onchange="importD(event)">
+</div>
+
+<div id="page-overview" class="page active">
+  <div class="ov5" id="pSummary"></div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">各平台廣告支出（當月）</div><div class="cwrap"><canvas id="pieC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">各平台 ROAS 比較</div><div class="cwrap"><canvas id="roasBarC"></canvas></div></div>
+  </div>
+  <div class="ccard" style="margin-bottom:14px"><div class="ctitle">全平台月度廣告支出趨勢</div><div class="cwrap-tall"><canvas id="trendC"></canvas></div></div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>平台</th><th>廣告支出</th><th>ROAS</th><th>轉換數</th><th>CPC</th><th>CTR</th><th>CPA</th></tr></thead>
+    <tbody id="ovBody"></tbody>
+  </table></div></div>
+</div>
+
+<div id="page-google" class="page">
+  <div class="section-title"><span class="pbadge google-b">Google Ads</span><span id="gLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="fcard">
+    <div class="ftitle">輸入本月數據</div>
+    <div class="fgrid">
+      <div class="fg"><label>曝光 Impressions</label><input type="number" id="g_impressions" placeholder="0"></div>
+      <div class="fg"><label>點擊 Clicks</label><input type="number" id="g_clicks" placeholder="0"></div>
+      <div class="fg"><label>CTR (%)</label><input type="number" id="g_ctr" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>CPC</label><input type="number" id="g_cpc" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>加入購物車 ATC</label><input type="number" id="g_atc" placeholder="0"></div>
+      <div class="fg"><label>歸因購買數 Conversion</label><input type="number" id="g_conv" placeholder="0"></div>
+      <div class="fg"><label>歸因購買價值 C.Value</label><input type="number" id="g_cvalue" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>轉換率 CVR (%)</label><input type="number" id="g_cvr" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>廣告支出 Spend</label><input type="number" id="g_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>MoM 支出變化 (%)</label><input type="number" id="g_spend_mom" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="fgrid" style="margin-top:10px">
+      <div class="fg hfg"><label>★ 每次購物車成本 CPA</label><input type="number" id="g_cpa" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>MoM 購物車變化 (%)</label><input type="number" id="g_cpa_mom" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>每次轉換成本</label><input type="number" id="g_conv_cpa" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>MoM 轉換成本 (%)</label><input type="number" id="g_conv_cpa_mom" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ ROAS</label><input type="number" id="g_roas" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>MoM ROAS 變化 (%)</label><input type="number" id="g_roas_mom" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>廣告帶來客單價</label><input type="number" id="g_aov" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>廣告客單 MoM (%)</label><input type="number" id="g_aov_mom" step="0.01" placeholder="0.00"></div>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="g_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="g_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CPA 月趨勢</div><div class="cwrap"><canvas id="g_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CTR & CVR (%)</div><div class="cwrap"><canvas id="g_trC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>支出</th><th>曝光</th><th>點擊</th><th>CTR%</th><th>CPC</th><th>轉換</th><th>CVR%</th><th>ROAS</th><th>CPA購物車</th></tr></thead>
+    <tbody id="gHist"></tbody>
+  </table></div></div>
+</div>
+
+<div id="page-meta" class="page">
+  <div class="section-title"><span class="pbadge meta-b">Meta</span><span id="mLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="fcard">
+    <div class="ftitle">輸入本月數據</div>
+    <div class="fgrid">
+      <div class="fg"><label>廣告支出 Spend</label><input type="number" id="m_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>轉換次數 網站購買</label><input type="number" id="m_conv" placeholder="0"></div>
+      <div class="fg"><label>每次轉換成本</label><input type="number" id="m_conv_cost" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ ROAS</label><input type="number" id="m_roas" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>歸因購物車 ATC</label><input type="number" id="m_atc" placeholder="0"></div>
+      <div class="fg"><label>歸因購買價值 C.Value</label><input type="number" id="m_cvalue" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 每次購物車成本 CPA</label><input type="number" id="m_cpa" step="0.01" placeholder="0.00"></div>
+    </div>
+    <hr class="divider">
+    <div class="ftitle">排除掉流量廣告後</div>
+    <div class="fgrid">
+      <div class="fg"><label>轉換廣告支出</label><input type="number" id="m_conv_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>其他廣告支出</label><input type="number" id="m_other_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>歸因購買價值（全）</label><input type="number" id="m_cvalue_all" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 轉換廣告 ROAS</label><input type="number" id="m_conv_roas" step="0.01" placeholder="0.00"></div>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="m_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="m_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">CPA 月趨勢</div><div class="cwrap"><canvas id="m_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">整體 vs 轉換廣告 ROAS</div><div class="cwrap"><canvas id="m_rrC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>支出</th><th>轉換數</th><th>轉換成本</th><th>ROAS</th><th>CPA購物車</th><th>歸因價值</th><th>轉換廣告ROAS</th></tr></thead>
+    <tbody id="mHist"></tbody>
+  </table></div></div>
+</div>
+
+<div id="page-criteo" class="page">
+  <div class="section-title"><span class="pbadge criteo-b">Criteo</span><span id="cLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="fcard">
+    <div class="ftitle">輸入本月數據（from GA4）</div>
+    <div class="fgrid">
+      <div class="fg"><label>點擊數</label><input type="number" id="cr_clicks" placeholder="0"></div>
+      <div class="fg"><label>新使用者人數</label><input type="number" id="cr_new_users" placeholder="0"></div>
+      <div class="fg"><label>廣告支出 Spend</label><input type="number" id="cr_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 每次新客成本</label><input type="number" id="cr_cpa_new" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ ROAS</label><input type="number" id="cr_roas" step="0.01" placeholder="0.00"></div>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="cr_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="cr_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">每次新客成本 月趨勢</div><div class="cwrap"><canvas id="cr_cC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">新使用者人數 月趨勢</div><div class="cwrap"><canvas id="cr_uC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>支出</th><th>點擊</th><th>新使用者</th><th>每次新客成本</th><th>ROAS</th></tr></thead>
+    <tbody id="crHist"></tbody>
+  </table></div></div>
+</div>
+
+<div id="page-shopee" class="page">
+  <div class="section-title"><span class="pbadge shopee-b">Shopee Ads</span><span id="sLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="fcard">
+    <div class="ftitle">輸入本月數據</div>
+    <div class="fgrid">
+      <div class="fg"><label>點擊數</label><input type="number" id="sh_clicks" placeholder="0"></div>
+      <div class="fg"><label>訂單數 (*銷售數不準)</label><input type="number" id="sh_orders" placeholder="0"></div>
+      <div class="fg"><label>銷售金額 (K/M→補0)</label><input type="number" id="sh_sales" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>廣告支出 (K/M→補0)</label><input type="number" id="sh_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ ROAS</label><input type="number" id="sh_roas" step="0.01" placeholder="0.00"></div>
+    </div>
+    <hr class="divider">
+    <div class="ftitle">全平台整合（客戶別營業額）</div>
+    <div class="fgrid">
+      <div class="fg"><label>全平台營業額</label><input type="number" id="sh_total_rev" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 廣告價值對全營業額%</label><input type="number" id="sh_ad_pct" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>蝦皮數據中心的營收</label><input type="number" id="sh_dc_rev" step="0.01" placeholder="0.00"></div>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="sh_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="sh_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告佔全平台營業額 (%)</div><div class="cwrap"><canvas id="sh_pC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">銷售金額 月趨勢</div><div class="cwrap"><canvas id="sh_slC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>支出</th><th>點擊</th><th>訂單數</th><th>銷售金額</th><th>ROAS</th><th>廣告佔比%</th></tr></thead>
+    <tbody id="shHist"></tbody>
+  </table></div></div>
+</div>
+
+<div id="page-momo" class="page">
+  <div class="section-title"><span class="pbadge momo-b">Momo RMN</span><span id="moLabel" style="color:var(--muted);font-size:12px;margin-left:6px"></span></div>
+  <div class="fcard">
+    <div class="ftitle">輸入本月數據（廣告成效-拉時擋）</div>
+    <div class="fgrid">
+      <div class="fg"><label>點擊數</label><input type="number" id="mo_clicks" placeholder="0"></div>
+      <div class="fg"><label>訂單數</label><input type="number" id="mo_orders" placeholder="0"></div>
+      <div class="fg"><label>購物車數</label><input type="number" id="mo_cart" placeholder="0"></div>
+      <div class="fg"><label>CPC 每次點擊出價</label><input type="number" id="mo_cpc" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>商品訂購金額</label><input type="number" id="mo_order_val" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 轉換率 CVR (%)</label><input type="number" id="mo_cvr" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>廣告支出 Spend</label><input type="number" id="mo_spend" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ ROAS</label><input type="number" id="mo_roas" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>每次購物車成本</label><input type="number" id="mo_cart_cpa" step="0.01" placeholder="0.00"></div>
+    </div>
+    <hr class="divider">
+    <div class="ftitle">全平台整合（客戶別營業額）</div>
+    <div class="fgrid">
+      <div class="fg"><label>全平台營業額</label><input type="number" id="mo_total_rev" step="0.01" placeholder="0.00"></div>
+      <div class="fg hfg"><label>★ 廣告價值對全營業額%</label><input type="number" id="mo_ad_pct" step="0.01" placeholder="0.00"></div>
+    </div>
+  </div>
+  <div class="cgrid">
+    <div class="ccard"><div class="ctitle">ROAS 月趨勢</div><div class="cwrap"><canvas id="mo_rC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">廣告支出 月趨勢</div><div class="cwrap"><canvas id="mo_sC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">轉換率 CVR (%) 月趨勢</div><div class="cwrap"><canvas id="mo_cvC"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">每次購物車成本 月趨勢</div><div class="cwrap"><canvas id="mo_cpC"></canvas></div></div>
+  </div>
+  <div class="tcard"><div class="twrap"><table>
+    <thead><tr><th>月份</th><th>支出</th><th>點擊</th><th>訂單</th><th>CPC</th><th>CVR%</th><th>ROAS</th><th>購物車成本</th></tr></thead>
+    <tbody id="moHist"></tbody>
+  </table></div></div>
+</div>
+</div>
+
+<script>
+const PW='JamesW';
+const SK='ad_v1';
+let db=JSON.parse(localStorage.getItem(SK)||'{}');
+
+function unlock(){
+  const v=document.getElementById('pwInput').value;
+  if(v===PW){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    sessionStorage.setItem('ad_auth','1');
+    init();
+  } else {
+    document.getElementById('lockErr').textContent='密碼錯誤，請再試一次';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+  }
+}
+function logout(){
+  sessionStorage.removeItem('ad_auth');
+  document.getElementById('app').style.display='none';
+  document.getElementById('lockScreen').style.display='flex';
+  document.getElementById('pwInput').value='';
+  document.getElementById('lockErr').textContent='';
+}
+if(sessionStorage.getItem('ad_auth')==='1'){
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+const COLS={google:'#4285f4',meta:'#0765C5',criteo:'#E65100',shopee:'#D23E14',momo:'#7B1FA2'};
+const PNAMES={google:'Google',meta:'Meta',criteo:'Criteo',shopee:'Shopee',momo:'Momo RMN'};
+const PF={
+  google:['impressions','clicks','ctr','cpc','atc','conv','cvalue','cvr','spend','spend_mom','cpa','cpa_mom','conv_cpa','conv_cpa_mom','roas','roas_mom','aov','aov_mom'],
+  meta:['spend','conv','conv_cost','roas','atc','cvalue','cpa','conv_spend','other_spend','cvalue_all','conv_roas'],
+  criteo:['clicks','new_users','spend','cpa_new','roas'],
+  shopee:['clicks','orders','sales','spend','roas','total_rev','ad_pct','dc_rev'],
+  momo:['clicks','orders','cart','cpc','order_val','cvr','spend','roas','cart_cpa','total_rev','ad_pct']
+};
+const PX={google:'g',meta:'m',criteo:'cr',shopee:'sh',momo:'mo'};
+
+function ml(m){if(!m)return'';const[y,mo]=m.split('-');return`${y}年${parseInt(mo)}月`}
+function cm(){return document.getElementById('selMonth').value}
+function onMC(){loadF();renderAll()}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const map={overview:0,google:1,meta:2,criteo:3,shopee:4,momo:5};
+  document.querySelectorAll('.nav-tab')[map[id]].classList.add('active');
+  renderAll();
+}
+
+function loadF(){
+  const m=cm();
+  Object.keys(PF).forEach(p=>{
+    const px=PX[p];const entry=(db[m]&&db[m][p])||{};
+    PF[p].forEach(f=>{const el=document.getElementById(px+'_'+f);if(el)el.value=entry[f]!==undefined?entry[f]:''});
+  });
+  const lmap={google:'gLabel',meta:'mLabel',criteo:'cLabel',shopee:'sLabel',momo:'moLabel'};
+  Object.values(lmap).forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=ml(cm())});
+}
+
+function saveAll(){
+  const m=cm();if(!db[m])db[m]={};
+  Object.keys(PF).forEach(p=>{
+    const px=PX[p];const entry={};
+    PF[p].forEach(f=>{const el=document.getElementById(px+'_'+f);if(el&&el.value!=='')entry[f]=parseFloat(el.value)||0});
+    db[m][p]=entry;
+  });
+  localStorage.setItem(SK,JSON.stringify(db));
+  renderAll();toast('已儲存 '+ml(m));
+}
+
+function exportD(){
+  const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ads_'+cm()+'.json';a.click();
+}
+function importD(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{db=JSON.parse(ev.target.result);localStorage.setItem(SK,JSON.stringify(db));loadF();renderAll();toast('匯入成功')}catch{toast('格式錯誤')}};
+  r.readAsText(f);e.target.value='';
+}
+
+function toast(msg){
+  let t=document.getElementById('_toast');
+  if(!t){t=document.createElement('div');t.id='_toast';Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',background:'#1a1a18',color:'#fff',padding:'8px 16px',borderRadius:'8px',fontSize:'12px',zIndex:9999,transition:'opacity .3s'});document.body.appendChild(t)}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2200);
+}
+
+function sortedMonths(){return Object.keys(db).sort()}
+
+function mkLine(id,labels,datasets){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  if(ctx._c)ctx._c.destroy();
+  ctx._c=new Chart(ctx,{type:'line',data:{labels,datasets:datasets.map(d=>({...d,tension:.35,pointRadius:3,borderWidth:2,fill:false}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:datasets.length>1,labels:{font:{size:10},boxWidth:10}}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});
+}
+function mkBar(id,labels,values,colors){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  if(ctx._c)ctx._c.destroy();
+  ctx._c=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:colors||'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},beginAtZero:true}}}});
+}
+function mkPie(id,labels,values,colors){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  if(ctx._c)ctx._c.destroy();
+  ctx._c=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}});
+}
+
+function renderAll(){renderOV();renderG();renderM();renderCR();renderSH();renderMO()}
+
+function renderOV(){
+  const months=sortedMonths();const m=cm();const cur=db[m]||{};
+  const ps=['google','meta','criteo','shopee','momo'];
+  document.getElementById('pSummary').innerHTML=ps.map(p=>{const d=cur[p]||{};return`<div class="pcard" onclick="showPage('${p}')"><div class="pname"><span class="tag ${p}-b">${PNAMES[p]}</span></div><div class="pspend">$${(d.spend||0).toLocaleString()}</div><div class="proas">ROAS ${(d.roas||0).toFixed(2)}x</div></div>`}).join('');
+  mkPie('pieC',ps.map(p=>PNAMES[p]),ps.map(p=>(cur[p]||{}).spend||0),ps.map(p=>COLS[p]));
+  mkBar('roasBarC',ps.map(p=>PNAMES[p]),ps.map(p=>(cur[p]||{}).roas||0),ps.map(p=>COLS[p]));
+  mkLine('trendC',months.map(m=>ml(m)),ps.map(p=>({label:PNAMES[p],data:months.map(mo=>(db[mo]&&db[mo][p]&&db[mo][p].spend)||0),borderColor:COLS[p]})));
+  const rows=[];months.forEach(mo=>{ps.forEach(p=>{const d=(db[mo]&&db[mo][p])||{};if(!Object.keys(d).length)return;rows.push(`<tr><td>${ml(mo)}</td><td><span class="tag ${p}-b">${PNAMES[p]}</span></td><td>$${(d.spend||0).toLocaleString()}</td><td class="${(d.roas||0)>=3?'good':'bad'}">${(d.roas||0).toFixed(2)}x</td><td>${d.conv||d.orders||'-'}</td><td>${d.cpc?'$'+d.cpc.toFixed(0):'-'}</td><td>${d.ctr?d.ctr.toFixed(2)+'%':'-'}</td><td>${(d.cpa||d.cart_cpa)?'$'+(d.cpa||d.cart_cpa).toFixed(0):'-'}</td></tr>`)})});
+  document.getElementById('ovBody').innerHTML=rows.join('')||'<tr><td colspan="8" class="empty">尚無數據</td></tr>';
+}
+
+function renderG(){
+  const months=sortedMonths();const labels=months.map(m=>ml(m));const data=months.map(m=>(db[m]&&db[m].google)||{});const s=f=>data.map(d=>d[f]||0);
+  mkLine('g_rC',labels,[{label:'ROAS',data:s('roas'),borderColor:COLS.google}]);
+  mkLine('g_sC',labels,[{label:'支出',data:s('spend'),borderColor:COLS.google}]);
+  mkLine('g_cC',labels,[{label:'CPA',data:s('cpa'),borderColor:COLS.google}]);
+  mkLine('g_trC',labels,[{label:'CTR%',data:s('ctr'),borderColor:'#378ADD'},{label:'CVR%',data:s('cvr'),borderColor:'#1D9E75'}]);
+  document.getElementById('gHist').innerHTML=months.map((m,i)=>`<tr><td>${ml(m)}</td><td>$${(data[i].spend||0).toLocaleString()}</td><td>${(data[i].impressions||0).toLocaleString()}</td><td>${(data[i].clicks||0).toLocaleString()}</td><td>${(data[i].ctr||0).toFixed(2)}%</td><td>$${(data[i].cpc||0).toFixed(0)}</td><td>${data[i].conv||0}</td><td>${(data[i].cvr||0).toFixed(2)}%</td><td class="${(data[i].roas||0)>=3?'good':'bad'}">${(data[i].roas||0).toFixed(2)}x</td><td>$${(data[i].cpa||0).toFixed(0)}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">尚無數據</td></tr>';
+}
+
+function renderM(){
+  const months=sortedMonths();const labels=months.map(m=>ml(m));const data=months.map(m=>(db[m]&&db[m].meta)||{});const s=f=>data.map(d=>d[f]||0);
+  mkLine('m_rC',labels,[{label:'ROAS',data:s('roas'),borderColor:COLS.meta}]);
+  mkLine('m_sC',labels,[{label:'支出',data:s('spend'),borderColor:COLS.meta}]);
+  mkLine('m_cC',labels,[{label:'CPA',data:s('cpa'),borderColor:COLS.meta}]);
+  mkLine('m_rrC',labels,[{label:'整體ROAS',data:s('roas'),borderColor:COLS.meta},{label:'轉換廣告ROAS',data:s('conv_roas'),borderColor:'#1D9E75'}]);
+  document.getElementById('mHist').innerHTML=months.map((m,i)=>`<tr><td>${ml(m)}</td><td>$${(data[i].spend||0).toLocaleString()}</td><td>${data[i].conv||0}</td><td>$${(data[i].conv_cost||0).toFixed(0)}</td><td class="${(data[i].roas||0)>=3?'good':'bad'}">${(data[i].roas||0).toFixed(2)}x</td><td>$${(data[i].cpa||0).toFixed(0)}</td><td>$${(data[i].cvalue||0).toLocaleString()}</td><td>${(data[i].conv_roas||0).toFixed(2)}x</td></tr>`).join('')||'<tr><td colspan="8" class="empty">尚無數據</td></tr>';
+}
+
+function renderCR(){
+  const months=sortedMonths();const labels=months.map(m=>ml(m));const data=months.map(m=>(db[m]&&db[m].criteo)||{});const s=f=>data.map(d=>d[f]||0);
+  mkLine('cr_rC',labels,[{label:'ROAS',data:s('roas'),borderColor:COLS.criteo}]);
+  mkLine('cr_sC',labels,[{label:'支出',data:s('spend'),borderColor:COLS.criteo}]);
+  mkLine('cr_cC',labels,[{label:'每次新客成本',data:s('cpa_new'),borderColor:COLS.criteo}]);
+  mkLine('cr_uC',labels,[{label:'新使用者',data:s('new_users'),borderColor:'#1D9E75'}]);
+  document.getElementById('crHist').innerHTML=months.map((m,i)=>`<tr><td>${ml(m)}</td><td>$${(data[i].spend||0).toLocaleString()}</td><td>${(data[i].clicks||0).toLocaleString()}</td><td>${(data[i].new_users||0).toLocaleString()}</td><td>$${(data[i].cpa_new||0).toFixed(0)}</td><td class="${(data[i].roas||0)>=3?'good':'bad'}">${(data[i].roas||0).toFixed(2)}x</td></tr>`).join('')||'<tr><td colspan="6" class="empty">尚無數據</td></tr>';
+}
+
+function renderSH(){
+  const months=sortedMonths();const labels=months.map(m=>ml(m));const data=months.map(m=>(db[m]&&db[m].shopee)||{});const s=f=>data.map(d=>d[f]||0);
+  mkLine('sh_rC',labels,[{label:'ROAS',data:s('roas'),borderColor:COLS.shopee}]);
+  mkLine('sh_sC',labels,[{label:'支出',data:s('spend'),borderColor:COLS.shopee}]);
+  mkLine('sh_pC',labels,[{label:'廣告佔比%',data:s('ad_pct'),borderColor:'#854F0B'}]);
+  mkLine('sh_slC',labels,[{label:'銷售金額',data:s('sales'),borderColor:'#1D9E75'}]);
+  document.getElementById('shHist').innerHTML=months.map((m,i)=>`<tr><td>${ml(m)}</td><td>$${(data[i].spend||0).toLocaleString()}</td><td>${(data[i].clicks||0).toLocaleString()}</td><td>${data[i].orders||0}</td><td>$${(data[i].sales||0).toLocaleString()}</td><td class="${(data[i].roas||0)>=3?'good':'bad'}">${(data[i].roas||0).toFixed(2)}x</td><td>${(data[i].ad_pct||0).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="7" class="empty">尚無數據</td></tr>';
+}
+
+function renderMO(){
+  const months=sortedMonths();const labels=months.map(m=>ml(m));const data=months.map(m=>(db[m]&&db[m].momo)||{});const s=f=>data.map(d=>d[f]||0);
+  mkLine('mo_rC',labels,[{label:'ROAS',data:s('roas'),borderColor:COLS.momo}]);
+  mkLine('mo_sC',labels,[{label:'支出',data:s('spend'),borderColor:COLS.momo}]);
+  mkLine('mo_cvC',labels,[{label:'CVR%',data:s('cvr'),borderColor:'#EF9F27'}]);
+  mkLine('mo_cpC',labels,[{label:'購物車成本',data:s('cart_cpa'),borderColor:COLS.momo}]);
+  document.getElementById('moHist').innerHTML=months.map((m,i)=>`<tr><td>${ml(m)}</td><td>$${(data[i].spend||0).toLocaleString()}</td><td>${(data[i].clicks||0).toLocaleString()}</td><td>${data[i].orders||0}</td><td>$${(data[i].cpc||0).toFixed(0)}</td><td>${(data[i].cvr||0).toFixed(2)}%</td><td class="${(data[i].roas||0)>=3?'good':'bad'}">${(data[i].roas||0).toFixed(2)}x</td><td>$${(data[i].cart_cpa||0).toFixed(0)}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">尚無數據</td></tr>';
+}
+
+function init(){
+  document.getElementById('selMonth').value=new Date().toISOString().slice(0,7);
+  loadF();renderAll();
+}
+
+if(sessionStorage.getItem('ad_auth')==='1'){init()}
+</script>
+</body>
+</html>
